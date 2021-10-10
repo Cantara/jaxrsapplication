@@ -3,6 +3,7 @@ package no.cantara.jaxrsapp.test;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.http.HttpEntity;
+import org.apache.http.HttpHeaders;
 import org.apache.http.client.fluent.Request;
 import org.apache.http.client.fluent.Response;
 import org.apache.http.entity.ContentType;
@@ -14,6 +15,8 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class TestClient {
 
@@ -24,6 +27,7 @@ public final class TestClient {
     public static final int CONNECT_TIMEOUT_MS = 3000;
     public static final int SOCKET_TIMEOUT_MS = 10000;
 
+    private Map<String, String> headerByKey = new ConcurrentHashMap<>();
     private final String host;
     private final int port;
 
@@ -34,6 +38,16 @@ public final class TestClient {
 
     public static TestClient newClient(String host, int port) {
         return new TestClient(host, port);
+    }
+
+    public TestClient useAuthorization(String authorization) {
+        headerByKey.put(HttpHeaders.AUTHORIZATION, authorization);
+        return this;
+    }
+
+    public TestClient useHeader(String header, String value) {
+        headerByKey.put(header, value);
+        return this;
     }
 
     public String getHost() {
@@ -60,8 +74,11 @@ public final class TestClient {
     }
 
     Request withHeaders(Request request, String... headersKeyAndValue) {
+        for (Map.Entry<String, String> entry : headerByKey.entrySet()) {
+            request.setHeader(entry.getKey(), entry.getValue());
+        }
         for (int i = 0; i + 1 < headersKeyAndValue.length; i += 2) {
-            request.addHeader(headersKeyAndValue[i], headersKeyAndValue[i + 1]);
+            request.setHeader(headersKeyAndValue[i], headersKeyAndValue[i + 1]);
         }
         return request;
     }
