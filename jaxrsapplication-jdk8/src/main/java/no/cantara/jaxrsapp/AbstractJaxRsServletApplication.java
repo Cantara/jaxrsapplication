@@ -3,6 +3,7 @@ package no.cantara.jaxrsapp;
 import no.cantara.config.ApplicationProperties;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.glassfish.jersey.server.ResourceConfig;
@@ -10,12 +11,17 @@ import org.glassfish.jersey.servlet.ServletContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.servlet.DispatcherType;
+import javax.servlet.Filter;
 import javax.ws.rs.core.Application;
+import java.util.EnumSet;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Supplier;
 
 public abstract class AbstractJaxRsServletApplication<A extends AbstractJaxRsServletApplication<A>> implements JaxRsServletApplication<A> {
@@ -26,6 +32,7 @@ public abstract class AbstractJaxRsServletApplication<A extends AbstractJaxRsSer
     protected final Application application;
     protected final Server server;
 
+    protected final List<FilterSpec> filterSpecs = new CopyOnWriteArrayList<>();
     protected final Map<Class<?>, Object> jaxRsWsComponentByType = new ConcurrentHashMap<>();
     protected final Map<Class<?>, Object> singletonByType = new ConcurrentHashMap<>();
     protected final Map<Class<?>, Supplier<Object>> initOverrides = new ConcurrentHashMap<>();
@@ -60,6 +67,12 @@ public abstract class AbstractJaxRsServletApplication<A extends AbstractJaxRsSer
     @Override
     public <T> T get(Class<T> clazz) {
         return (T) this.singletonByType.get(clazz);
+    }
+
+    protected <T extends Filter> T initAndAddServletFilter(Class<T> clazz, Supplier<T> filterSupplier, String pathSpec, EnumSet<DispatcherType> dispatches) {
+        T instance = init(clazz, filterSupplier);
+        filterSpecs.add(new FilterSpec(clazz, instance, pathSpec, dispatches));
+        return instance;
     }
 
     protected <T> T initAndRegisterJaxRsWsComponent(Class<T> clazz, Supplier<T> init) {
@@ -113,6 +126,10 @@ public abstract class AbstractJaxRsServletApplication<A extends AbstractJaxRsSer
         ServletContextHandler servletContextHandler = new ServletContextHandler(ServletContextHandler.SESSIONS);
         String contextPath = config.get("server.context-path");
         servletContextHandler.setContextPath(contextPath);
+        for (FilterSpec filterSpec : filterSpecs) {
+            FilterHolder filterHolder = new FilterHolder(filterSpec.filter);
+            servletContextHandler.addFilter(filterHolder, filterSpec.pathSpec, filterSpec.dispatches);
+        }
         ServletContainer jerseyServlet = new ServletContainer(resourceConfig);
         put(ServletContainer.class, jerseyServlet);
         servletContextHandler.addServlet(new ServletHolder(jerseyServlet), "/*");
@@ -123,5 +140,19 @@ public abstract class AbstractJaxRsServletApplication<A extends AbstractJaxRsSer
     public int getBoundPort() {
         int port = ((ServerConnector) server.getConnectors()[0]).getLocalPort();
         return port;
+    }
+
+    protected static class FilterSpec {
+        protected final Class<? extends Filter> clazz;
+        protected final Filter filter;
+        protected final String pathSpec;
+        protected final EnumSet<DispatcherType> dispatches;
+
+        public FilterSpec(Class<? extends Filter> clazz, Filter filter, String pathSpec, EnumSet<DispatcherType> dispatches) {
+            this.clazz = clazz;
+            this.filter = filter;
+            this.pathSpec = pathSpec;
+            this.dispatches = dispatches;
+        }
     }
 }
