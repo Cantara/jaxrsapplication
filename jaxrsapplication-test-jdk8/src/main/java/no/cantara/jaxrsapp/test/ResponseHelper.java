@@ -1,6 +1,7 @@
 package no.cantara.jaxrsapp.test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.fluent.Response;
@@ -64,7 +65,11 @@ public class ResponseHelper<T> {
 
     private String bodyAsString() {
         try {
-            return EntityUtils.toString(httpResponse.getEntity(), StandardCharsets.UTF_8);
+            HttpEntity entity = httpResponse.getEntity();
+            if (entity == null) {
+                return null;
+            }
+            return EntityUtils.toString(entity, StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
