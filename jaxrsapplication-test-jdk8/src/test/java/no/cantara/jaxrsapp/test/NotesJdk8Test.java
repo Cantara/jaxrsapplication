@@ -10,9 +10,9 @@ import javax.inject.Inject;
 
 @JaxRsApplicationProvider("notes")
 @ExtendWith(IntegrationTestExtension.class)
-public class NotesTest {
+public class NotesJdk8Test {
 
-    private static final Logger log = LoggerFactory.getLogger(NotesTest.class);
+    private static final Logger log = LoggerFactory.getLogger(NotesJdk8Test.class);
 
     @Inject
     TestClient testClient;

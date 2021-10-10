@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory;
 
 public class GreetApplication extends AbstractJaxRsServletApplication<GreetApplication> {
 
-    private static final Logger log = LoggerFactory.getLogger(AbstractJaxRsServletApplication.class);
+    private static final Logger log = LoggerFactory.getLogger(GreetApplication.class);
 
     public static void main(String[] args) {
         GreetApplication application = new GreetApplication(ApplicationProperties.builder().defaults().build());
@@ -21,11 +21,11 @@ public class GreetApplication extends AbstractJaxRsServletApplication<GreetAppli
 
     @Override
     public GreetApplication init() {
-        initOrOverride(GreetingResource.class, this::initSampleResource);
+        initAndRegisterJaxRsWsComponent(GreetingResource.class, this::initGreetingResource);
         return this;
     }
 
-    private GreetingResource initSampleResource() {
+    private GreetingResource initGreetingResource() {
         return new GreetingResource();
     }
 }

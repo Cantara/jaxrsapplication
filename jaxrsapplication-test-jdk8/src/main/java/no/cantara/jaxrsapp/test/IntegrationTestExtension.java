@@ -4,8 +4,6 @@ import no.cantara.config.ApplicationProperties;
 import no.cantara.config.ProviderLoader;
 import no.cantara.jaxrsapp.JaxRsServletApplication;
 import no.cantara.jaxrsapp.JaxRsServletApplicationFactory;
-import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.ServerConnector;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
@@ -114,11 +112,8 @@ public class IntegrationTestExtension implements BeforeEachCallback, BeforeAllCa
         application.init();
         application.start();
 
-        Server webServer = (Server) application.get(Server.class);
-        if (webServer != null) {
-            int port = ((ServerConnector) webServer.getConnectors()[0]).getLocalPort();
-            client.put(providerAlias, TestClient.newClient("localhost", port));
-        }
+        int boundPort = application.getBoundPort();
+        client.put(providerAlias, TestClient.newClient("localhost", boundPort));
     }
 
     @Override

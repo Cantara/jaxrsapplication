@@ -15,4 +15,6 @@ public interface JaxRsServletApplication<A extends JaxRsServletApplication> {
     A start();
 
     A stop();
+
+    int getBoundPort();
 }

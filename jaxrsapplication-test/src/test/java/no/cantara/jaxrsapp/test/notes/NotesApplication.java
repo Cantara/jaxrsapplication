@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory;
 
 public class NotesApplication extends AbstractJaxRsServletApplication<NotesApplication> {
 
-    private static final Logger log = LoggerFactory.getLogger(AbstractJaxRsServletApplication.class);
+    private static final Logger log = LoggerFactory.getLogger(NotesApplication.class);
 
     public static void main(String[] args) {
         NotesApplication application = new NotesApplication(ApplicationProperties.builder().defaults().build());
@@ -21,11 +21,11 @@ public class NotesApplication extends AbstractJaxRsServletApplication<NotesAppli
 
     @Override
     public NotesApplication init() {
-        initOrOverride(NoteResource.class, this::initMyResource);
+        initAndRegisterJaxRsWsComponent(NoteResource.class, this::initNoteResource);
         return this;
     }
 
-    private NoteResource initMyResource() {
+    private NoteResource initNoteResource() {
         return new NoteResource();
     }
 }
