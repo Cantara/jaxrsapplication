@@ -6,17 +6,20 @@ import jakarta.ws.rs.container.ContainerRequestContext;
 import jakarta.ws.rs.core.Application;
 import jakarta.ws.rs.core.Request;
 import no.cantara.config.ApplicationProperties;
+import no.cantara.config.ProviderLoader;
+import no.cantara.jaxrsapp.security.SecurityFilter;
+import no.cantara.security.authentication.AuthenticationManager;
+import no.cantara.security.authentication.AuthenticationManagerFactory;
+import no.cantara.security.authorization.AccessManager;
+import no.cantara.security.authorization.AccessManagerFactory;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
-import org.glassfish.jersey.internal.PropertiesDelegate;
 import org.glassfish.jersey.server.ContainerRequest;
 import org.glassfish.jersey.server.ResourceConfig;
-import org.glassfish.jersey.server.internal.process.Endpoint;
 import org.glassfish.jersey.server.internal.routing.RoutingContext;
-import org.glassfish.jersey.server.model.ResourceMethodInvoker;
 import org.glassfish.jersey.servlet.ServletContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -144,17 +147,6 @@ public abstract class AbstractJaxRsServletApplication<A extends AbstractJaxRsSer
         return servletContextHandler;
     }
 
-    protected Method getJaxRsRoutingEndpoint(ContainerRequestContext requestContext) {
-        Request request = requestContext.getRequest();
-        ContainerRequest containerRequest = (ContainerRequest) request;
-        PropertiesDelegate propertiesDelegate = containerRequest.getPropertiesDelegate();
-        RoutingContext routingContext = (RoutingContext) containerRequest.getUriInfo();
-        Endpoint endpoint = routingContext.getEndpoint();
-        ResourceMethodInvoker resourceMethodInvoker = (ResourceMethodInvoker) endpoint;
-        Method resourceMethod = resourceMethodInvoker.getResourceMethod();
-        return resourceMethod;
-    }
-
     @Override
     public int getBoundPort() {
         int port = ((ServerConnector) server.getConnectors()[0]).getLocalPort();
@@ -173,5 +165,42 @@ public abstract class AbstractJaxRsServletApplication<A extends AbstractJaxRsSer
             this.pathSpec = pathSpec;
             this.dispatches = dispatches;
         }
+    }
+
+    protected void initSecurity() {
+        init(AuthenticationManager.class, this::initAuthenticationManager);
+        init(AccessManager.class, this::initAccessManager);
+        initAndRegisterJaxRsWsComponent(SecurityFilter.class, this::initSecurityFilter);
+    }
+
+    protected AuthenticationManager initAuthenticationManager() {
+        String provider = config.get("authentication.provider", "default");
+        AuthenticationManager authenticationManager = ProviderLoader.configure(config, provider, AuthenticationManagerFactory.class);
+        return authenticationManager;
+    }
+
+    protected AccessManager initAccessManager() {
+        ApplicationProperties authConfig = ApplicationProperties.builder()
+                .classpathPropertiesFile("service-authorization.properties")
+                .classpathPropertiesFile("authorization.properties")
+                .filesystemPropertiesFile("authorization.properties")
+                .build();
+        String provider = config.get("authorization.provider", "default");
+        AccessManager accessManager = ProviderLoader.configure(authConfig, provider, AccessManagerFactory.class);
+        return accessManager;
+    }
+
+    protected SecurityFilter initSecurityFilter() {
+        AuthenticationManager authenticationManager = get(AuthenticationManager.class);
+        AccessManager accessManager = get(AccessManager.class);
+        return new SecurityFilter(authenticationManager, accessManager, this::getJaxRsRoutingEndpoint);
+    }
+
+    protected Method getJaxRsRoutingEndpoint(ContainerRequestContext requestContext) {
+        Request request = requestContext.getRequest();
+        ContainerRequest containerRequest = (ContainerRequest) request;
+        RoutingContext routingContext = (RoutingContext) containerRequest.getUriInfo();
+        Method resourceMethod = routingContext.getResourceMethod();
+        return resourceMethod;
     }
 }
