@@ -22,6 +22,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>no.cantara.jaxrsapp</groupId>
+            <artifactId>jaxrssecurity</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>no.cantara.config</groupId>
             <artifactId>property-config</artifactId>
         </dependency>
