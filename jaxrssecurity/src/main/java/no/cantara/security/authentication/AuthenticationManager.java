@@ -2,9 +2,9 @@ package no.cantara.security.authentication;
 
 public interface AuthenticationManager {
 
-    UserAuthentication authenticateAsUser(String bearerToken) throws UnauthorizedException;
+    UserAuthentication authenticateAsUser(String authorizationHeader) throws UnauthorizedException;
 
-    ApplicationAuthentication authenticateAsApplication(String bearerToken) throws UnauthorizedException;
+    ApplicationAuthentication authenticateAsApplication(String authorizationHeader) throws UnauthorizedException;
 
-    AuthenticationResult authenticate(String bearerToken);
+    AuthenticationResult authenticate(String authorizationHeader);
 }

@@ -28,17 +28,17 @@ public class DefaultAuthenticationManager implements AuthenticationManager {
         this.applicationCredentialStore = applicationCredentialStore;
     }
 
-    public UserAuthentication authenticateAsUser(String bearerToken) throws UnauthorizedException {
-        return getCustomerRef(bearerToken);
+    public UserAuthentication authenticateAsUser(String authorizationHeader) throws UnauthorizedException {
+        return getCustomerRef(authorizationHeader);
     }
 
-    public ApplicationAuthentication authenticateAsApplication(String bearerToken) throws UnauthorizedException {
-        String authorization = bearerToken;
+    public ApplicationAuthentication authenticateAsApplication(String authorizationHeader) throws UnauthorizedException {
+        String authorization = authorizationHeader;
         if (authorization == null || authorization.isEmpty()) {
             return null;
         }
         try {
-            String token = authorization.substring(7);
+            String token = authorization.substring("Bearer ".length());
 
             final String applicationId = new CommandGetApplicationIdFromApplicationTokenId(
                     URI.create(applicationCredentialStore.getSecurityTokenServiceUri()),
@@ -49,17 +49,17 @@ public class DefaultAuthenticationManager implements AuthenticationManager {
                 return new CantaraApplicationAuthentication(applicationId, token);
             }
         } catch (Exception e) {
-            log.error("Exception in attempt to resolve authorization, bearerToken: " + bearerToken, e);
+            log.error("Exception in attempt to resolve authorization, bearerToken: " + authorizationHeader, e);
         }
         return null;
     }
 
-    public AuthenticationResult authenticate(String bearerToken) {
-        String authorization = bearerToken;
+    public AuthenticationResult authenticate(String authorizationHeader) {
+        String authorization = authorizationHeader;
         if (authorization == null || authorization.isEmpty() || authorization.length() < 39) {
             return new CantaraAuthenticationResult(null);
         }
-        String token = authorization.substring(7);
+        String token = authorization.substring("Bearer ".length());
 
         if (token.length() < 33) {
             //Assume application-token-id
@@ -87,9 +87,9 @@ public class DefaultAuthenticationManager implements AuthenticationManager {
             throw new UnauthorizedException();
         }
         String usertokenid;
-        String token = authorization.substring(7);
-        String ssoId = null;
-        String customerRef = null;
+        String token = authorization.substring("Bearer ".length());
+        String ssoId;
+        String customerRef;
         Supplier<String> forwardingTokenGenerator = () -> token; // forwarding incoming token by default
         if (token.length() > 50) {
             log.debug("Suspected JWT-token is {}", token);
