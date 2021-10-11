@@ -6,14 +6,22 @@ import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
+import org.glassfish.jersey.internal.PropertiesDelegate;
+import org.glassfish.jersey.server.ContainerRequest;
 import org.glassfish.jersey.server.ResourceConfig;
+import org.glassfish.jersey.server.internal.process.Endpoint;
+import org.glassfish.jersey.server.internal.routing.RoutingContext;
+import org.glassfish.jersey.server.model.ResourceMethodInvoker;
 import org.glassfish.jersey.servlet.ServletContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.Filter;
+import javax.ws.rs.container.ContainerRequestContext;
 import javax.ws.rs.core.Application;
+import javax.ws.rs.core.Request;
+import java.lang.reflect.Method;
 import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -134,6 +142,17 @@ public abstract class AbstractJaxRsServletApplication<A extends AbstractJaxRsSer
         put(ServletContainer.class, jerseyServlet);
         servletContextHandler.addServlet(new ServletHolder(jerseyServlet), "/*");
         return servletContextHandler;
+    }
+
+    protected Method getJaxRsRoutingEndpoint(ContainerRequestContext requestContext) {
+        Request request = requestContext.getRequest();
+        ContainerRequest containerRequest = (ContainerRequest) request;
+        PropertiesDelegate propertiesDelegate = containerRequest.getPropertiesDelegate();
+        RoutingContext routingContext = (RoutingContext) containerRequest.getUriInfo();
+        Endpoint endpoint = routingContext.getEndpoint();
+        ResourceMethodInvoker resourceMethodInvoker = (ResourceMethodInvoker) endpoint;
+        Method resourceMethod = resourceMethodInvoker.getResourceMethod();
+        return resourceMethod;
     }
 
     @Override
