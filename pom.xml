@@ -48,6 +48,7 @@
         <module>jaxrsapplication</module>
         <module>jaxrsapplication-test</module>
         <module>jaxrssecurity</module>
+        <module>jaxrssecurity-test</module>
     </modules>
 
     <dependencyManagement>
