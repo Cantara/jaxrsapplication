@@ -8,7 +8,8 @@ public class JaxRsServletApplicationTest {
 
     @Test
     public void thatStackCanBeStartedAndStoppedWithoutIssue() {
-        TestApplication application = (TestApplication) ProviderLoader.configure(ApplicationProperties.builder().testDefaults().build(), "test-application", JaxRsServletApplicationFactory.class);
+        ApplicationProperties config = ApplicationProperties.builder().testDefaults().build();
+        TestApplication application = (TestApplication) ProviderLoader.configure(config, "test-application", JaxRsServletApplicationFactory.class);
         application.init();
         application.start();
         application.stop();

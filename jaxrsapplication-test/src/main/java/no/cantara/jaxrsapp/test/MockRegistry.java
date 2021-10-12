@@ -2,23 +2,28 @@ package no.cantara.jaxrsapp.test;
 
 import java.util.Iterator;
 import java.util.Map;
-import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ConcurrentHashMap;
 
-public class MockRegistry implements Iterable<Object> {
+public class MockRegistry implements Iterable<Class<?>> {
 
-    private final Map<String, Object> instanceByType = new ConcurrentSkipListMap<>();
+    private final Map<Class<?>, Object> instanceByType = new ConcurrentHashMap<>();
 
     public <T> MockRegistry add(T instance) {
-        instanceByType.put(instance.getClass().getName(), instance);
+        instanceByType.put(instance.getClass(), instance);
+        return this;
+    }
+
+    public <T> MockRegistry add(Class<T> clazz, T instance) {
+        instanceByType.put(clazz, instance);
         return this;
     }
 
     public <T> T get(Class<T> clazz) {
-        return (T) instanceByType.get(clazz.getName());
+        return (T) instanceByType.get(clazz);
     }
 
     @Override
-    public Iterator<Object> iterator() {
-        return instanceByType.values().iterator();
+    public Iterator<Class<?>> iterator() {
+        return instanceByType.keySet().iterator();
     }
 }

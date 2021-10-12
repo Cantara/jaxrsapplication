@@ -4,7 +4,7 @@ import no.cantara.config.ApplicationProperties;
 
 public class TestApplication extends AbstractJaxRsServletApplication<TestApplication> {
     public TestApplication(ApplicationProperties config) {
-        super(config);
+        super("test-application", config);
     }
 
     @Override

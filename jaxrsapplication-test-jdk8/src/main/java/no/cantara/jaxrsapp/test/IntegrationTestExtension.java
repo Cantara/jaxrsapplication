@@ -53,7 +53,9 @@ public class IntegrationTestExtension implements BeforeEachCallback, BeforeAllCa
                 providerAlias = jaxRsApplicationProvider.value()[0];
             }
 
-            ApplicationProperties.Builder configBuilder = ApplicationProperties.builder().testDefaults();
+            ApplicationProperties.Builder configBuilder = ApplicationProperties.builder()
+                    .classpathPropertiesFile(providerAlias + "/application.properties")
+                    .testDefaults();
             initTestApplication(testClass, providerAlias, configBuilder);
 
         } else {
@@ -63,7 +65,9 @@ public class IntegrationTestExtension implements BeforeEachCallback, BeforeAllCa
              */
 
             for (String providerAlias : jaxRsApplicationProvider.value()) {
-                ApplicationProperties.Builder configBuilder = ApplicationProperties.builder().testDefaults();
+                ApplicationProperties.Builder configBuilder = ApplicationProperties.builder()
+                        .classpathPropertiesFile(providerAlias + "/application.properties")
+                        .testDefaults();
                 initTestApplication(testClass, providerAlias, configBuilder);
             }
         }
@@ -71,6 +75,23 @@ public class IntegrationTestExtension implements BeforeEachCallback, BeforeAllCa
 
     private void initTestApplication(Class<?> testClass, String providerAlias, ApplicationProperties.Builder configBuilder) throws InstantiationException, IllegalAccessException, InvocationTargetException {
         ConfigOverride configOverride = testClass.getDeclaredAnnotation(ConfigOverride.class);
+        String profile = ofNullable(System.getProperty("config.profile"))
+                .orElseGet(() -> ofNullable(System.getenv("CONFIG_PROFILE"))
+                        .orElse(providerAlias) // default
+                );
+        if (profile != null) {
+                String preProfileFilename = String.format("%s-application.properties", profile);
+                String postProfileFilename = String.format("application-%s.properties", profile);
+                configBuilder.classpathPropertiesFile(preProfileFilename);
+                configBuilder.classpathPropertiesFile(postProfileFilename);
+                configBuilder.filesystemPropertiesFile(preProfileFilename);
+                configBuilder.filesystemPropertiesFile(postProfileFilename);
+        }
+        String overrideFile = ofNullable(System.getProperty("config.file"))
+                .orElseGet(() -> System.getenv("CONFIG_FILE"));
+        if (overrideFile != null) {
+            configBuilder.filesystemPropertiesFile(overrideFile);
+        }
         if (configOverride != null) {
             String[] overrideArray = configOverride.value();
             Map<String, String> configOverrideMap = new LinkedHashMap<>();
@@ -78,20 +99,6 @@ public class IntegrationTestExtension implements BeforeEachCallback, BeforeAllCa
                 configOverrideMap.put(overrideArray[i], overrideArray[i + 1]);
             }
             configBuilder.map(configOverrideMap);
-        }
-        String overrideFile = ofNullable(System.getProperty("config.file"))
-                .orElseGet(() -> System.getenv("CONFIG_FILE"));
-        if (overrideFile != null) {
-            configBuilder.filesystemPropertiesFile(overrideFile);
-        }
-        String profile = ofNullable(System.getProperty("config.profile"))
-                .orElseGet(() -> ofNullable(System.getenv("CONFIG_PROFILE"))
-                        .orElse(providerAlias) // default
-                );
-        if (profile != null) {
-            String profileFilename = String.format("application-%s.properties", profile);
-            configBuilder.classpathPropertiesFile(profileFilename);
-            configBuilder.filesystemPropertiesFile(profileFilename);
         }
         ApplicationProperties config = configBuilder.build();
 
@@ -104,8 +111,9 @@ public class IntegrationTestExtension implements BeforeEachCallback, BeforeAllCa
             Class<? extends MockRegistry> registryClazz = applicationConfig.value();
             Constructor<?> constructor = registryClazz.getDeclaredConstructors()[0];
             MockRegistry mockRegistry = (MockRegistry) constructor.newInstance();
-            for (Object mock : mockRegistry) {
-                application.override(mock.getClass(), () -> mock);
+            for (Class<?> mockClazz : mockRegistry) {
+                Object instance = mockRegistry.get(mockClazz);
+                application.override(mockClazz, () -> instance);
             }
         }
 

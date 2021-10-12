@@ -8,7 +8,8 @@ public class JaxRsServletApplicationTestJdk8 {
 
     @Test
     public void thatStackCanBeStartedAndStoppedWithoutIssueJdk8() {
-        TestApplicationJdk8 application = (TestApplicationJdk8) ProviderLoader.configure(ApplicationProperties.builder().testDefaults().build(), "test-application", JaxRsServletApplicationFactory.class);
+        ApplicationProperties config = ApplicationProperties.builder().testDefaults().build();
+        TestApplicationJdk8 application = (TestApplicationJdk8) ProviderLoader.configure(config, "test-application-jdk8", JaxRsServletApplicationFactory.class);
         application.init();
         application.start();
         application.stop();

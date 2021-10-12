@@ -7,6 +7,9 @@ import jakarta.ws.rs.core.Application;
 import jakarta.ws.rs.core.Request;
 import no.cantara.config.ApplicationProperties;
 import no.cantara.config.ProviderLoader;
+import no.cantara.jaxrsapp.health.HealthProbe;
+import no.cantara.jaxrsapp.health.HealthResource;
+import no.cantara.jaxrsapp.health.HealthService;
 import no.cantara.jaxrsapp.security.SecurityFilter;
 import no.cantara.security.authentication.AuthenticationManager;
 import no.cantara.security.authentication.AuthenticationManagerFactory;
@@ -25,6 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Method;
+import java.time.temporal.ChronoUnit;
 import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -39,6 +43,7 @@ public abstract class AbstractJaxRsServletApplication<A extends AbstractJaxRsSer
 
     private static final Logger log = LoggerFactory.getLogger(AbstractJaxRsServletApplication.class);
 
+    protected final String applicationAlias;
     protected final ApplicationProperties config;
     protected final Application application;
     protected final Server server;
@@ -48,7 +53,8 @@ public abstract class AbstractJaxRsServletApplication<A extends AbstractJaxRsSer
     protected final Map<Class<?>, Object> singletonByType = new ConcurrentHashMap<>();
     protected final Map<Class<?>, Supplier<Object>> initOverrides = new ConcurrentHashMap<>();
 
-    protected AbstractJaxRsServletApplication(ApplicationProperties config) {
+    protected AbstractJaxRsServletApplication(String applicationAlias, ApplicationProperties config) {
+        this.applicationAlias = applicationAlias;
         this.config = config;
         put(ApplicationProperties.class, config);
         int port = config.asInt("server.port");
@@ -167,30 +173,53 @@ public abstract class AbstractJaxRsServletApplication<A extends AbstractJaxRsSer
         }
     }
 
-    protected void initSecurity() {
-        init(AuthenticationManager.class, this::initAuthenticationManager);
-        init(AccessManager.class, this::initAccessManager);
-        initAndRegisterJaxRsWsComponent(SecurityFilter.class, this::initSecurityFilter);
+    protected void initHealth(HealthProbe... healthProbes) {
+        HealthService healthService = init(HealthService.class, this::createHealthService);
+        for (HealthProbe healthProbe : healthProbes) {
+            healthService.registerHealthProbe(healthProbe.getKey(), healthProbe.getProbe());
+        }
+        HealthResource healthResource = initAndRegisterJaxRsWsComponent(HealthResource.class, this::createHealthResource);
     }
 
-    protected AuthenticationManager initAuthenticationManager() {
+    protected HealthService createHealthService() {
+        HealthService healthService = new HealthService(1800, ChronoUnit.MILLIS);
+        return healthService;
+    }
+
+    protected HealthResource createHealthResource() {
+        HealthService healthService = get(HealthService.class);
+        HealthResource healthResource = new HealthResource(healthService);
+        return healthResource;
+    }
+
+    protected void initSecurity() {
+        init(AuthenticationManager.class, this::createAuthenticationManager);
+        init(AccessManager.class, this::createAccessManager);
+        initAndRegisterJaxRsWsComponent(SecurityFilter.class, this::createSecurityFilter);
+    }
+
+    protected AuthenticationManager createAuthenticationManager() {
         String provider = config.get("authentication.provider", "default");
         AuthenticationManager authenticationManager = ProviderLoader.configure(config, provider, AuthenticationManagerFactory.class);
         return authenticationManager;
     }
 
-    protected AccessManager initAccessManager() {
+    protected AccessManager createAccessManager() {
         ApplicationProperties authConfig = ApplicationProperties.builder()
-                .classpathPropertiesFile("service-authorization.properties")
-                .classpathPropertiesFile("authorization.properties")
+                .classpathPropertiesFile(applicationAlias + "/service-authorization.properties")
+                .classpathPropertiesFile(applicationAlias + "/authorization.properties")
+                .classpathPropertiesFile(applicationAlias + "-authorization.properties")
+                .classpathPropertiesFile("authorization-" + applicationAlias + ".properties")
                 .filesystemPropertiesFile("authorization.properties")
+                .filesystemPropertiesFile(applicationAlias + "-authorization.properties")
+                .filesystemPropertiesFile("authorization-" + applicationAlias + ".properties")
                 .build();
         String provider = config.get("authorization.provider", "default");
         AccessManager accessManager = ProviderLoader.configure(authConfig, provider, AccessManagerFactory.class);
         return accessManager;
     }
 
-    protected SecurityFilter initSecurityFilter() {
+    protected SecurityFilter createSecurityFilter() {
         AuthenticationManager authenticationManager = get(AuthenticationManager.class);
         AccessManager accessManager = get(AccessManager.class);
         return new SecurityFilter(authenticationManager, accessManager, this::getJaxRsRoutingEndpoint);
