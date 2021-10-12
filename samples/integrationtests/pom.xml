@@ -11,7 +11,7 @@
 
     <artifactId>integrationtests</artifactId>
     <version>0.2-SNAPSHOT</version>
-    <packaging>jar</packaging>
+    <packaging>pom</packaging>
 
     <name>Sample-IntegrationTests</name>
     <description>Sample-IntegrationTests</description>
