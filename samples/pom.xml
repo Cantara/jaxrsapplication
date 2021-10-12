@@ -24,4 +24,29 @@
         <module>randomizer</module>
         <module>integrationtests</module>
     </modules>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <configuration>
+                        <release>11</release>
+                        <target>11</target>
+                        <source>11</source>
+                        <encoding>${module.build.sourceEncoding}</encoding>
+                        <meminitial>64m</meminitial>
+                        <maxmem>512m</maxmem>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
 </project>
