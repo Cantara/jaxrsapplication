@@ -36,12 +36,6 @@ public class SecurityFilter implements ContainerRequestFilter {
         if (securityOverride != null) {
             return; // access granted, no authentication or access-check needed
         }
-        SecureAction secureAction = resourceMethod.getDeclaredAnnotation(SecureAction.class);
-        if (secureAction == null) {
-            // forbid access to endpoint without secure-action annotation, i.e. secure-by-default
-            requestContext.abortWith(Response.status(Response.Status.FORBIDDEN).build());
-            return;
-        }
         String authorizationHeader = requestContext.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
         AuthenticationResult authenticationResult = authenticationManager.authenticate(authorizationHeader);
         if (!authenticationResult.isValid()) {
@@ -51,6 +45,12 @@ public class SecurityFilter implements ContainerRequestFilter {
         }
         final Authentication authentication = authenticationResult.authentication();
         requestContext.setProperty(Authentication.class.getName(), authentication);
+        SecureAction secureAction = resourceMethod.getDeclaredAnnotation(SecureAction.class);
+        if (secureAction == null) {
+            // forbid access to endpoint without secure-action annotation, i.e. secure-by-default
+            requestContext.abortWith(Response.status(Response.Status.FORBIDDEN).build());
+            return;
+        }
         String action = secureAction.value();
         boolean hasAccess = accessManager.hasAccess(authentication, action);
         if (!hasAccess) {
