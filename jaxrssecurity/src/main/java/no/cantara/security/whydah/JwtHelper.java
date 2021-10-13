@@ -8,7 +8,6 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.JWTVerifier;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
-import no.cantara.config.ApplicationProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,8 +17,14 @@ import java.util.concurrent.TimeUnit;
 /**
  * Location for JWT public key: https://whydahdev.cantara.no/oauth2/.well-known/jwks.json
  **/
-public class JwtUtils {
-    private static final Logger log = LoggerFactory.getLogger(JwtUtils.class);
+public class JwtHelper {
+    private static final Logger log = LoggerFactory.getLogger(JwtHelper.class);
+
+    final String oauth2Uri;
+
+    public JwtHelper(String oauth2Uri) {
+        this.oauth2Uri = oauth2Uri;
+    }
 
     public boolean isExpiredOrInvalid(String jwt) {
         try {
@@ -30,22 +35,21 @@ public class JwtUtils {
         }
     }
 
-    public static String getUserNameFromJwtToken(String token) throws JwkException {
+    public String getUserNameFromJwtToken(String token) throws JwkException {
         return getClaimFromJwtToken(token, "sub", String.class);
     }
 
-    public static String getUserTokenFromJwtToken(String token) throws JwkException {
+    public String getUserTokenFromJwtToken(String token) throws JwkException {
         return getClaimFromJwtToken(token, "usertoken_id", String.class);
     }
 
-    public static String getCustomerRefFromJwtToken(String token) throws JwkException {
+    public String getCustomerRefFromJwtToken(String token) throws JwkException {
         return getClaimFromJwtToken(token, "customer_ref", String.class);
     }
 
 
-    public static <T> T getClaimFromJwtToken(String authToken, String claimName, Class<T> requiredType) throws JwkException {
-        final ApplicationProperties properties = ApplicationProperties.getInstance();
-        String oauth2Issuer = properties.get(WhydahSecurityProperties.WHYDAH_OAUTH2_URI);
+    public <T> T getClaimFromJwtToken(String authToken, String claimName, Class<T> requiredType) throws JwkException {
+        String oauth2Issuer = oauth2Uri;
         DecodedJWT jwt = JWT.decode(authToken);
         JwkProvider provider = new JwkProviderBuilder(oauth2Issuer)
                 .cached(10, 24, TimeUnit.HOURS)

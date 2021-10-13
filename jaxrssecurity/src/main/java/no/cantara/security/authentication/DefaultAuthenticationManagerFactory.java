@@ -2,6 +2,7 @@ package no.cantara.security.authentication;
 
 import no.cantara.config.ApplicationProperties;
 import no.cantara.security.whydah.WhydahApplicationCredentialStore;
+import no.cantara.security.whydah.WhydahSecurityProperties;
 
 public class DefaultAuthenticationManagerFactory implements AuthenticationManagerFactory {
 
@@ -20,6 +21,7 @@ public class DefaultAuthenticationManagerFactory implements AuthenticationManage
 
     @Override
     public DefaultAuthenticationManager create(ApplicationProperties applicationProperties) {
-        return new DefaultAuthenticationManager(new WhydahApplicationCredentialStore(applicationProperties));
+        String oauth2Uri = applicationProperties.get(WhydahSecurityProperties.WHYDAH_OAUTH2_URI);
+        return new DefaultAuthenticationManager(oauth2Uri, new WhydahApplicationCredentialStore(applicationProperties));
     }
 }

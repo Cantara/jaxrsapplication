@@ -9,7 +9,7 @@ import net.whydah.sso.commands.userauth.CommandGetUserTokenByUserTicket;
 import net.whydah.sso.commands.userauth.CommandValidateUserTokenId;
 import net.whydah.sso.user.mappers.UserTokenMapper;
 import net.whydah.sso.user.types.UserToken;
-import no.cantara.security.whydah.JwtUtils;
+import no.cantara.security.whydah.JwtHelper;
 import no.cantara.security.whydah.WhydahApplicationCredentialStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,9 +22,11 @@ public class DefaultAuthenticationManager implements AuthenticationManager {
 
     private static final Logger log = LoggerFactory.getLogger(DefaultAuthenticationManager.class);
 
-    private WhydahApplicationCredentialStore applicationCredentialStore;
+    private final String oauth2Uri;
+    private final WhydahApplicationCredentialStore applicationCredentialStore;
 
-    public DefaultAuthenticationManager(WhydahApplicationCredentialStore applicationCredentialStore) {
+    public DefaultAuthenticationManager(String oauth2Uri, WhydahApplicationCredentialStore applicationCredentialStore) {
+        this.oauth2Uri = oauth2Uri;
         this.applicationCredentialStore = applicationCredentialStore;
     }
 
@@ -98,9 +100,10 @@ public class DefaultAuthenticationManager implements AuthenticationManager {
         }
         try {
             log.debug("Resolving JWT-token");
-            ssoId = JwtUtils.getUserNameFromJwtToken(token);
-            customerRef = JwtUtils.getCustomerRefFromJwtToken(token);
-            usertokenid = JwtUtils.getUserTokenFromJwtToken(token);
+            JwtHelper jwtUtils = new JwtHelper(oauth2Uri);
+            ssoId = jwtUtils.getUserNameFromJwtToken(token);
+            customerRef = jwtUtils.getCustomerRefFromJwtToken(token);
+            usertokenid = jwtUtils.getUserTokenFromJwtToken(token);
             log.debug("Resolved JWT-token. Found customerRef {} and usertokenid {}", customerRef, usertokenid);
         } catch (JWTDecodeException e) {
             log.debug("JWTDecoding threw exception", e);
