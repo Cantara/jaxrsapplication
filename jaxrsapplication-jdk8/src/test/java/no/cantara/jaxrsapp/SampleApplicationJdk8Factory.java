@@ -10,7 +10,7 @@ public class SampleApplicationJdk8Factory implements JaxRsServletApplicationFact
 
     @Override
     public String alias() {
-        return "test-application-jdk8";
+        return "sample-application-jdk8";
     }
 
     @Override
