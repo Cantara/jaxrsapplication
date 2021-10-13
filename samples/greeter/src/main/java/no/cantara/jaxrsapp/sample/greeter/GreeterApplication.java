@@ -36,8 +36,8 @@ public class GreeterApplication extends AbstractJaxRsServletApplication<GreeterA
     }
 
     private HttpRandomizerClient createHttpRandomizer() {
-        String randomizerHost = config.get("randomizer.host", "localhost");
-        int randomizerPort = config.asInt("randomizer.port", 8724);
+        String randomizerHost = config.get("randomizer.host");
+        int randomizerPort = config.asInt("randomizer.port");
         return new HttpRandomizerClient("http://" + randomizerHost + ":" + randomizerPort + "/randomizer");
     }
 
