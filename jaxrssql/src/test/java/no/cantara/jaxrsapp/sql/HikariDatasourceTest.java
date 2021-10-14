@@ -2,6 +2,7 @@ package no.cantara.jaxrsapp.sql;
 
 import no.cantara.config.ApplicationProperties;
 import no.cantara.config.ProviderLoader;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import javax.sql.DataSource;
@@ -16,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class HikariDatasourceTest {
 
     @Test
+    @Disabled
     public void thatHikariDataSourceWorks() throws SQLException {
         ApplicationProperties config = ApplicationProperties.builder()
                 .classpathPropertiesFile("hikari.properties")
