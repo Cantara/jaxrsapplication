@@ -6,6 +6,8 @@ import no.cantara.jaxrsapp.health.HealthProbe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Random;
+
 public class RandomizerApplication extends AbstractJaxRsServletApplication<RandomizerApplication> {
 
     private static final Logger log = LoggerFactory.getLogger(RandomizerApplication.class);
@@ -29,12 +31,18 @@ public class RandomizerApplication extends AbstractJaxRsServletApplication<Rando
     @Override
     public RandomizerApplication init() {
         initSecurity();
+        init(Random.class, this::createRandom);
         RandomizerResource randomizerResource = initAndRegisterJaxRsWsComponent(RandomizerResource.class, this::createGreetingResource);
         initHealth(new HealthProbe("randomizer.request.count", randomizerResource::getRequestCount));
         return this;
     }
 
+    private Random createRandom() {
+        return new Random(System.currentTimeMillis());
+    }
+
     private RandomizerResource createGreetingResource() {
-        return new RandomizerResource();
+        Random random = get(Random.class);
+        return new RandomizerResource(random);
     }
 }

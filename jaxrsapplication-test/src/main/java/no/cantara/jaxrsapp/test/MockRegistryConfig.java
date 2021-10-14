@@ -9,7 +9,9 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface MockRegistryConfig {
     /**
-     * A {@link MockRegistry} class to instanciate and use as to register.
+     * A {@link MockRegistry} class to instantiate and use as to register.
      */
     Class<? extends MockRegistry>[] value();
+
+    String application() default "";
 }

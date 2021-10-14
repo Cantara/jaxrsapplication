@@ -6,6 +6,8 @@ import jakarta.inject.Named;
 import no.cantara.jaxrsapp.sample.greeter.Greeting;
 import no.cantara.jaxrsapp.test.IntegrationTestExtension;
 import no.cantara.jaxrsapp.test.JaxRsApplicationProvider;
+import no.cantara.jaxrsapp.test.MockRegistryConfig;
+import no.cantara.jaxrsapp.test.MockRegistryConfigs;
 import no.cantara.jaxrsapp.test.TestClient;
 import org.apache.http.HttpHeaders;
 import org.junit.jupiter.api.Test;
@@ -13,8 +15,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+
 @JaxRsApplicationProvider({"greeter", "randomizer"})
 @ExtendWith(IntegrationTestExtension.class)
+@MockRegistryConfigs({
+        @MockRegistryConfig(value = GreetingMockRegistry.class, application = "greeter"),
+        @MockRegistryConfig(value = RandomizerMockRegistry.class, application = "randomizer")
+})
 public class GreetAndRandomizerIntegrationTest {
 
     private static final Logger log = LoggerFactory.getLogger(GreetAndRandomizerIntegrationTest.class);

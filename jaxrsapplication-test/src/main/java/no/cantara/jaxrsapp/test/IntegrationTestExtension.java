@@ -159,24 +159,12 @@ public class IntegrationTestExtension implements BeforeEachCallback, BeforeAllCa
         applicationByProvider.put(providerAlias, application);
         application.override(ApplicationProperties.class, () -> config);
 
-        MockRegistryConfig applicationConfig = testClass.getDeclaredAnnotation(MockRegistryConfig.class);
-        if (applicationConfig != null) {
-            Class<? extends MockRegistry>[] registryClazzes = applicationConfig.value();
-            for (Class<? extends MockRegistry> registryClazz : registryClazzes) {
-                Constructor<?> constructor = registryClazz.getDeclaredConstructors()[0];
-                MockRegistry mockRegistry;
-                try {
-                    mockRegistry = (MockRegistry) constructor.newInstance();
-                } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
-                    throw new RuntimeException(e);
-                }
-                mockRegistry.withJaxRsRegistry(application);
-                for (Class<?> mockClazz : mockRegistry) {
-                    Supplier<?> factory = mockRegistry.getFactory(mockClazz);
-                    application.override(mockClazz, factory);
-                }
-            }
+        MockRegistryConfigs mockRegistryConfigs = testClass.getDeclaredAnnotation(MockRegistryConfigs.class);
+        for (MockRegistryConfig mockRegistryConfig : mockRegistryConfigs.value()) {
+            overrideWithMocks(application, providerAlias, mockRegistryConfig);
         }
+        MockRegistryConfig mockRegistryConfig = testClass.getDeclaredAnnotation(MockRegistryConfig.class);
+        overrideWithMocks(application, providerAlias, mockRegistryConfig);
 
         application.init();
         application.start();
@@ -185,6 +173,30 @@ public class IntegrationTestExtension implements BeforeEachCallback, BeforeAllCa
         client.put(providerAlias, TestClient.newClient("localhost", boundPort));
 
         return application;
+    }
+
+    private void overrideWithMocks(JaxRsServletApplication application, String providerAlias, MockRegistryConfig mockRegistryConfig) {
+        if (mockRegistryConfig == null) {
+            return;
+        }
+        if (!mockRegistryConfig.application().isEmpty() && !mockRegistryConfig.application().equals(providerAlias)) {
+            return;
+        }
+        Class<? extends MockRegistry>[] registryClazzes = mockRegistryConfig.value();
+        for (Class<? extends MockRegistry> registryClazz : registryClazzes) {
+            Constructor<?> constructor = registryClazz.getDeclaredConstructors()[0];
+            MockRegistry mockRegistry;
+            try {
+                mockRegistry = (MockRegistry) constructor.newInstance();
+            } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
+                throw new RuntimeException(e);
+            }
+            mockRegistry.withJaxRsRegistry(application);
+            for (Class<?> mockClazz : mockRegistry) {
+                Supplier<?> factory = mockRegistry.getFactory(mockClazz);
+                application.override(mockClazz, factory);
+            }
+        }
     }
 
     private ApplicationProperties.Builder resolveConfiguration(Class<?> testClass, String providerAlias) {

@@ -17,9 +17,10 @@ import java.util.concurrent.atomic.AtomicLong;
 public class RandomizerResource {
 
     private final AtomicLong requestCount = new AtomicLong();
-    private final Random random = new Random(System.currentTimeMillis());
+    private final Random random;
 
-    public RandomizerResource() {
+    public RandomizerResource(Random random) {
+        this.random = random;
     }
 
     public long getRequestCount() {
