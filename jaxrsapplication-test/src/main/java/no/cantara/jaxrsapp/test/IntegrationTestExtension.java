@@ -160,8 +160,10 @@ public class IntegrationTestExtension implements BeforeEachCallback, BeforeAllCa
         application.override(ApplicationProperties.class, () -> config);
 
         MockRegistryConfigs mockRegistryConfigs = testClass.getDeclaredAnnotation(MockRegistryConfigs.class);
-        for (MockRegistryConfig mockRegistryConfig : mockRegistryConfigs.value()) {
-            overrideWithMocks(application, providerAlias, mockRegistryConfig);
+        if (mockRegistryConfigs != null) {
+            for (MockRegistryConfig mockRegistryConfig : mockRegistryConfigs.value()) {
+                overrideWithMocks(application, providerAlias, mockRegistryConfig);
+            }
         }
         MockRegistryConfig mockRegistryConfig = testClass.getDeclaredAnnotation(MockRegistryConfig.class);
         overrideWithMocks(application, providerAlias, mockRegistryConfig);
