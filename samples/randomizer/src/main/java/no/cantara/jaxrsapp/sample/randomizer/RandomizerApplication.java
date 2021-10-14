@@ -6,6 +6,7 @@ import no.cantara.jaxrsapp.health.HealthProbe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.PrintWriter;
 import java.util.Random;
 
 public class RandomizerApplication extends AbstractJaxRsServletApplication<RandomizerApplication> {
@@ -31,10 +32,16 @@ public class RandomizerApplication extends AbstractJaxRsServletApplication<Rando
     @Override
     public RandomizerApplication init() {
         initSecurity();
+        PrintWriter pw = init(PrintWriter.class, this::createAuditTo);
+        pw.printf("AUDIT: I am the Randomizer application!%n").flush();
         init(Random.class, this::createRandom);
         RandomizerResource randomizerResource = initAndRegisterJaxRsWsComponent(RandomizerResource.class, this::createGreetingResource);
         initHealth(new HealthProbe("randomizer.request.count", randomizerResource::getRequestCount));
         return this;
+    }
+
+    private PrintWriter createAuditTo() {
+        return new PrintWriter(System.err);
     }
 
     private Random createRandom() {

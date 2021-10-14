@@ -159,14 +159,16 @@ public class IntegrationTestExtension implements BeforeEachCallback, BeforeAllCa
         applicationByProvider.put(providerAlias, application);
         application.override(ApplicationProperties.class, () -> config);
 
+        {
+            MockRegistryConfig mockRegistryConfig = testClass.getDeclaredAnnotation(MockRegistryConfig.class);
+            overrideWithMocks(application, providerAlias, mockRegistryConfig);
+        }
         MockRegistryConfigs mockRegistryConfigs = testClass.getDeclaredAnnotation(MockRegistryConfigs.class);
         if (mockRegistryConfigs != null) {
             for (MockRegistryConfig mockRegistryConfig : mockRegistryConfigs.value()) {
                 overrideWithMocks(application, providerAlias, mockRegistryConfig);
             }
         }
-        MockRegistryConfig mockRegistryConfig = testClass.getDeclaredAnnotation(MockRegistryConfig.class);
-        overrideWithMocks(application, providerAlias, mockRegistryConfig);
 
         application.init();
         application.start();
@@ -222,16 +224,32 @@ public class IntegrationTestExtension implements BeforeEachCallback, BeforeAllCa
         if (overrideFile != null) {
             configBuilder.filesystemPropertiesFile(overrideFile);
         }
-        ConfigOverride configOverride = testClass.getDeclaredAnnotation(ConfigOverride.class);
-        if (configOverride != null) {
-            String[] overrideArray = configOverride.value();
-            Map<String, String> configOverrideMap = new LinkedHashMap<>();
-            for (int i = 0; i < overrideArray.length; i += 2) {
-                configOverrideMap.put(overrideArray[i], overrideArray[i + 1]);
+        {
+            ConfigOverride configOverride = testClass.getDeclaredAnnotation(ConfigOverride.class);
+            overrideConfig(configBuilder, configOverride, providerAlias);
+        }
+        ConfigOverrides configOverrides = testClass.getDeclaredAnnotation(ConfigOverrides.class);
+        if (configOverrides != null) {
+            for (ConfigOverride configOverride : configOverrides.value()) {
+                overrideConfig(configBuilder, configOverride, providerAlias);
             }
-            configBuilder.map(configOverrideMap);
         }
         return configBuilder;
+    }
+
+    private void overrideConfig(ApplicationProperties.Builder configBuilder, ConfigOverride configOverride, String providerAlias) {
+        if (configOverride == null) {
+            return;
+        }
+        if (!configOverride.application().isEmpty() && !configOverride.application().equals(providerAlias)) {
+            return; // configuration override not mapped to this provider-alias
+        }
+        String[] overrideArray = configOverride.value();
+        Map<String, String> configOverrideMap = new LinkedHashMap<>();
+        for (int i = 0; i < overrideArray.length; i += 2) {
+            configOverrideMap.put(overrideArray[i], overrideArray[i + 1]);
+        }
+        configBuilder.map(configOverrideMap);
     }
 
     @Override

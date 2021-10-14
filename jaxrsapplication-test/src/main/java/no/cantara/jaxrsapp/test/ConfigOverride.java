@@ -9,4 +9,5 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ConfigOverride {
     String[] value() default {};
+    String application() default "";
 }

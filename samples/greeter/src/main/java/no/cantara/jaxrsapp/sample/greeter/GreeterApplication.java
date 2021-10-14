@@ -6,6 +6,7 @@ import no.cantara.jaxrsapp.health.HealthProbe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.PrintWriter;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -32,11 +33,17 @@ public class GreeterApplication extends AbstractJaxRsServletApplication<GreeterA
     @Override
     public GreeterApplication init() {
         initSecurity();
+        PrintWriter pw = init(PrintWriter.class, this::createAuditTo);
+        pw.printf("AUDIT: I am the Greeting application!%n").flush();
         init(GreetingCandidateRepository.class, this::createGreetingCandidateRepository);
         init(RandomizerClient.class, this::createHttpRandomizer);
         GreetingResource greetingResource = initAndRegisterJaxRsWsComponent(GreetingResource.class, this::createGreetingResource);
         initHealth(new HealthProbe("greeting.request.count", greetingResource::getRequestCount));
         return this;
+    }
+
+    private PrintWriter createAuditTo() {
+        return new PrintWriter(System.err);
     }
 
     private GreetingCandidateRepository createGreetingCandidateRepository() {

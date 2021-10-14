@@ -7,7 +7,6 @@ import java.lang.annotation.Target;
 
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface ConfigOverride {
-    String[] value() default {};
-    String application() default "";
+public @interface ConfigOverrides {
+    ConfigOverride[] value() default {};
 }

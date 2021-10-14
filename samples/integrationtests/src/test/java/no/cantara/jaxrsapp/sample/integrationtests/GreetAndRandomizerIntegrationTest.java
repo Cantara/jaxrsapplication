@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import no.cantara.jaxrsapp.sample.greeter.Greeting;
+import no.cantara.jaxrsapp.test.ConfigOverride;
+import no.cantara.jaxrsapp.test.ConfigOverrides;
 import no.cantara.jaxrsapp.test.IntegrationTestExtension;
 import no.cantara.jaxrsapp.test.JaxRsApplicationProvider;
 import no.cantara.jaxrsapp.test.MockRegistryConfig;
@@ -19,8 +21,19 @@ import org.slf4j.LoggerFactory;
 @JaxRsApplicationProvider({"greeter", "randomizer"})
 @ExtendWith(IntegrationTestExtension.class)
 @MockRegistryConfigs({
-        @MockRegistryConfig(value = GreetingMockRegistry.class, application = "greeter"),
-        @MockRegistryConfig(value = RandomizerMockRegistry.class, application = "randomizer")
+        @MockRegistryConfig(application = "greeter", value = GreetingMockRegistry.class),
+        @MockRegistryConfig(application = "randomizer", value = RandomizerMockRegistry.class)
+})
+@MockRegistryConfig(GlobalMockRegistry.class)
+@ConfigOverrides({
+        @ConfigOverride(application = "greeter", value = {
+                "randomizer.host", "localhost",
+                "randomizer.port", "${randomizer.port}"
+        })
+})
+@ConfigOverride(value = {
+        "authentication.provider", "fake",
+        "server.port", "0"
 })
 public class GreetAndRandomizerIntegrationTest {
 
