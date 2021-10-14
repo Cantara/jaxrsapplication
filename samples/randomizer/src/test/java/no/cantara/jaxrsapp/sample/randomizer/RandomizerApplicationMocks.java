@@ -8,7 +8,6 @@ import no.cantara.security.authorization.AccessManagerFactory;
 
 public class RandomizerApplicationMocks extends MockRegistry {
     public RandomizerApplicationMocks() {
-        super(registry);
         addFactory(AccessManager.class, this::createAccessManager);
     }
 
