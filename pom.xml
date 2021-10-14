@@ -51,7 +51,7 @@
         <module>jaxrssecurity</module>
         <module>jaxrssecurity-test</module>
         <module>jaxrssql</module>
-        <module>jaxrssql-test</module>
+        <module>jaxrssql-embedded-postgres</module>
         <module>samples</module>
     </modules>
 
