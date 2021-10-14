@@ -14,6 +14,7 @@
 
     <properties>
         <module.build.sourceEncoding>UTF-8</module.build.sourceEncoding>
+        <slf4j.version>1.7.32</slf4j.version>
     </properties>
 
     <licenses>
@@ -49,6 +50,8 @@
         <module>jaxrsapplication-test</module>
         <module>jaxrssecurity</module>
         <module>jaxrssecurity-test</module>
+        <module>jaxrssql</module>
+        <module>jaxrssql-test</module>
         <module>samples</module>
     </modules>
 
@@ -118,7 +121,12 @@
             <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>
-                <version>1.7.32</version>
+                <version>${slf4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>jcl-over-slf4j</artifactId>
+                <version>${slf4j.version}</version>
             </dependency>
             <dependency>
                 <groupId>ch.qos.logback</groupId>
