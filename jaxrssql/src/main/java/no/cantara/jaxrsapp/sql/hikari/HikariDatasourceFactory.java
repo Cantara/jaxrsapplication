@@ -22,7 +22,6 @@ public class HikariDatasourceFactory implements JaxRsSqlDatasourceFactory {
     public HikariDatasource create(ApplicationProperties ap) {
         Properties props = new Properties();
         props.putAll(ap.map());
-        //props.put("dataSource.logWriter", new PrintWriter(System.out));
         HikariConfig config = new HikariConfig(props);
         HikariDataSource hikariDataSource = new HikariDataSource(config);
         HikariDatasource hikariJaxRsSqlDatasource = new HikariDatasource(hikariDataSource);
