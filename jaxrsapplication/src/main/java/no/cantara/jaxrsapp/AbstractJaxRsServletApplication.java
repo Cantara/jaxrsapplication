@@ -39,7 +39,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Supplier;
 
-public abstract class AbstractJaxRsServletApplication<A extends AbstractJaxRsServletApplication<A>> implements JaxRsServletApplication<A> {
+public abstract class AbstractJaxRsServletApplication<A extends AbstractJaxRsServletApplication<A>> implements JaxRsServletApplication<A>, JaxRsRegistry {
 
     private static final Logger log = LoggerFactory.getLogger(AbstractJaxRsServletApplication.class);
 
@@ -76,9 +76,9 @@ public abstract class AbstractJaxRsServletApplication<A extends AbstractJaxRsSer
     }
 
     @Override
-    public A put(Class<?> clazz, Object instance) {
+    public <T> JaxRsRegistry put(Class<T> clazz, T instance) {
         this.singletonByType.put(clazz, instance);
-        return (A) this;
+        return this;
     }
 
     @Override

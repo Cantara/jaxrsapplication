@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.Set;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -160,17 +161,20 @@ public class IntegrationTestExtension implements BeforeEachCallback, BeforeAllCa
 
         MockRegistryConfig applicationConfig = testClass.getDeclaredAnnotation(MockRegistryConfig.class);
         if (applicationConfig != null) {
-            Class<? extends MockRegistry> registryClazz = applicationConfig.value();
-            Constructor<?> constructor = registryClazz.getDeclaredConstructors()[0];
-            MockRegistry mockRegistry;
-            try {
-                mockRegistry = (MockRegistry) constructor.newInstance();
-            } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
-                throw new RuntimeException(e);
-            }
-            for (Class<?> mockClazz : mockRegistry) {
-                Object instance = mockRegistry.get(mockClazz);
-                application.override(mockClazz, () -> instance);
+            Class<? extends MockRegistry>[] registryClazzes = applicationConfig.value();
+            for (Class<? extends MockRegistry> registryClazz : registryClazzes) {
+                Constructor<?> constructor = registryClazz.getDeclaredConstructors()[0];
+                MockRegistry mockRegistry;
+                try {
+                    mockRegistry = (MockRegistry) constructor.newInstance();
+                } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
+                    throw new RuntimeException(e);
+                }
+                mockRegistry.withJaxRsRegistry(application);
+                for (Class<?> mockClazz : mockRegistry) {
+                    Supplier<?> factory = mockRegistry.getFactory(mockClazz);
+                    application.override(mockClazz, factory);
+                }
             }
         }
 

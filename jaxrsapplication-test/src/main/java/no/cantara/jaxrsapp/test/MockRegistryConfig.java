@@ -11,5 +11,5 @@ public @interface MockRegistryConfig {
     /**
      * A {@link MockRegistry} class to instanciate and use as to register.
      */
-    Class<? extends MockRegistry> value();
+    Class<? extends MockRegistry>[] value();
 }

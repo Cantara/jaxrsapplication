@@ -12,15 +12,18 @@ import jakarta.ws.rs.core.SecurityContext;
 import no.cantara.jaxrsapp.security.JaxRsAppPrincipal;
 import no.cantara.jaxrsapp.security.SecureAction;
 
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Path("/")
 public class GreetingResource {
 
     private final AtomicLong requestCount = new AtomicLong();
+    private final GreetingCandidateRepository greetingCandidateRepository;
     private final RandomizerClient randomizerClient;
 
-    public GreetingResource(RandomizerClient randomizerClient) {
+    public GreetingResource(GreetingCandidateRepository greetingCandidateRepository, RandomizerClient randomizerClient) {
+        this.greetingCandidateRepository = greetingCandidateRepository;
         this.randomizerClient = randomizerClient;
     }
 
@@ -38,16 +41,11 @@ public class GreetingResource {
         if (greetingParam != null) {
             greeting = greetingParam;
         } else {
-            String[] greetingCandidates = {
-                    "Hello",
-                    "Yo",
-                    "Hola",
-                    "Hei"
-            };
             JaxRsAppPrincipal principal = (JaxRsAppPrincipal) securityContext.getUserPrincipal();
             String forwardingToken = principal.getAuthentication().forwardingToken();
-            int randomizedCandidateIndex = randomizerClient.getRandomInteger(forwardingToken, greetingCandidates.length);
-            greeting = greetingCandidates[randomizedCandidateIndex];
+            List<GreetingCandidate> greetingCandidates = greetingCandidateRepository.greetingCandidates();
+            int randomizedCandidateIndex = randomizerClient.getRandomInteger(forwardingToken, greetingCandidates.size());
+            greeting = greetingCandidates.get(randomizedCandidateIndex).greeting;
         }
         return new Greeting(name, greeting);
     }

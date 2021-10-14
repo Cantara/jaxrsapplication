@@ -11,7 +11,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@MockRegistryConfig(GreetApplicationMocks.class)
+@MockRegistryConfig(GreetingMockRegistry.class)
 @ExtendWith(IntegrationTestExtension.class)
 public class GreetingTest {
 

@@ -6,6 +6,9 @@ import no.cantara.jaxrsapp.health.HealthProbe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 public class GreeterApplication extends AbstractJaxRsServletApplication<GreeterApplication> {
 
     private static final Logger log = LoggerFactory.getLogger(GreeterApplication.class);
@@ -29,10 +32,22 @@ public class GreeterApplication extends AbstractJaxRsServletApplication<GreeterA
     @Override
     public GreeterApplication init() {
         initSecurity();
+        init(GreetingCandidateRepository.class, this::createGreetingCandidateRepository);
         init(RandomizerClient.class, this::createHttpRandomizer);
         GreetingResource greetingResource = initAndRegisterJaxRsWsComponent(GreetingResource.class, this::createGreetingResource);
         initHealth(new HealthProbe("greeting.request.count", greetingResource::getRequestCount));
         return this;
+    }
+
+    private GreetingCandidateRepository createGreetingCandidateRepository() {
+        return () -> List.of(
+                        "Hello",
+                        "Yo",
+                        "Hola",
+                        "Hei"
+                ).stream()
+                .map(GreetingCandidate::new)
+                .collect(Collectors.toList());
     }
 
     private HttpRandomizerClient createHttpRandomizer() {
@@ -43,6 +58,7 @@ public class GreeterApplication extends AbstractJaxRsServletApplication<GreeterA
 
     private GreetingResource createGreetingResource() {
         RandomizerClient randomizerClient = get(RandomizerClient.class);
-        return new GreetingResource(randomizerClient);
+        GreetingCandidateRepository greetingCandidateRepository = get(GreetingCandidateRepository.class);
+        return new GreetingResource(greetingCandidateRepository, randomizerClient);
     }
 }
