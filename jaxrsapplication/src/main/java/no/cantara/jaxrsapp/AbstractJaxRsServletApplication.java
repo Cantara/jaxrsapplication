@@ -118,12 +118,16 @@ public abstract class AbstractJaxRsServletApplication<A extends AbstractJaxRsSer
             put(ServletContextHandler.class, servletContextHandler);
             server.setHandler(servletContextHandler);
             server.start();
+            initAfterStart();
         } catch (RuntimeException e) {
             throw e;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
         return (A) this;
+    }
+
+    protected void initAfterStart() {
     }
 
     @Override
