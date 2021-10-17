@@ -54,7 +54,7 @@ public class IntegrationTestExtension implements BeforeEachCallback, BeforeAllCa
                     break;
                 }
                 if (providerAlias == null) {
-                    throw new IllegalArgumentException("Error, Application need to implement the interface " + JaxRsServletApplicationFactory.class.getName());
+                    throw new IllegalArgumentException("Error, Provide a service-provider in META-INF/services folder that implements the interface " + JaxRsServletApplicationFactory.class.getName());
                 }
             } else {
                 // guaranteed (jaxRsApplicationProvider.value().length == 1)
