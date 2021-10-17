@@ -29,7 +29,7 @@ public class RandomizerResource {
 
     @GET
     @Path("/str/{length}")
-    @Produces(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.TEXT_PLAIN)
     @SecureAction("getstr")
     public Response getstr(@PathParam("length") String lengthParam) {
         requestCount.incrementAndGet();
@@ -45,7 +45,7 @@ public class RandomizerResource {
 
     @GET
     @Path("/int/{bound}")
-    @Produces(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.TEXT_PLAIN)
     @SecureAction("getint")
     public Response getint(@PathParam("bound") String upperBoundExParam) {
         requestCount.incrementAndGet();
@@ -55,7 +55,7 @@ public class RandomizerResource {
 
     @PUT
     @Path("/seed/{seed}")
-    @Produces(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.TEXT_PLAIN)
     @SecureAction("reseed")
     public Response reseed(@PathParam("seed") String seedParam) {
         requestCount.incrementAndGet();

@@ -2,8 +2,8 @@ package no.cantara.jaxrsapp.sample.greeter;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.inject.Inject;
+import no.cantara.jaxrsapp.test.ApplicationLifecycleListenerConfig;
 import no.cantara.jaxrsapp.test.IntegrationTestExtension;
-import no.cantara.jaxrsapp.test.MockRegistryConfig;
 import no.cantara.jaxrsapp.test.TestClient;
 import org.apache.http.HttpHeaders;
 import org.junit.jupiter.api.Test;
@@ -11,7 +11,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@MockRegistryConfig(GreetingMockRegistry.class)
+@ApplicationLifecycleListenerConfig(GreetingLifeCycleListener.class)
 @ExtendWith(IntegrationTestExtension.class)
 public class GreetingTest {
 

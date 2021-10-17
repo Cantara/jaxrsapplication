@@ -12,19 +12,16 @@ import jakarta.ws.rs.core.SecurityContext;
 import no.cantara.jaxrsapp.security.JaxRsAppPrincipal;
 import no.cantara.jaxrsapp.security.SecureAction;
 
-import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Path("/")
 public class GreetingResource {
 
     private final AtomicLong requestCount = new AtomicLong();
-    private final GreetingCandidateRepository greetingCandidateRepository;
-    private final RandomizerClient randomizerClient;
+    private final GreetingService greetingService;
 
-    public GreetingResource(GreetingCandidateRepository greetingCandidateRepository, RandomizerClient randomizerClient) {
-        this.greetingCandidateRepository = greetingCandidateRepository;
-        this.randomizerClient = randomizerClient;
+    public GreetingResource(GreetingService greetingService) {
+        this.greetingService = greetingService;
     }
 
     public long getRequestCount() {
@@ -37,16 +34,12 @@ public class GreetingResource {
     @SecureAction("greet")
     public Greeting greet(@PathParam("name") String name, @QueryParam("greeting") String greetingParam, @Context SecurityContext securityContext) {
         requestCount.incrementAndGet();
-        String greeting;
         if (greetingParam != null) {
-            greeting = greetingParam;
-        } else {
-            JaxRsAppPrincipal principal = (JaxRsAppPrincipal) securityContext.getUserPrincipal();
-            String forwardingToken = principal.getAuthentication().forwardingToken();
-            List<GreetingCandidate> greetingCandidates = greetingCandidateRepository.greetingCandidates();
-            int randomizedCandidateIndex = randomizerClient.getRandomInteger(forwardingToken, greetingCandidates.size());
-            greeting = greetingCandidates.get(randomizedCandidateIndex).greeting;
+            return new Greeting(name, greetingParam);
         }
-        return new Greeting(name, greeting);
+        JaxRsAppPrincipal principal = (JaxRsAppPrincipal) securityContext.getUserPrincipal();
+        String forwardingToken = principal.getAuthentication().forwardingToken();
+        Greeting greeting = greetingService.greet(name, forwardingToken);
+        return greeting;
     }
 }

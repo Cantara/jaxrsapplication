@@ -30,14 +30,13 @@ public class RandomizerApplication extends AbstractJaxRsServletApplication<Rando
     }
 
     @Override
-    public RandomizerApplication init() {
+    public void doInit() {
         initSecurity();
         PrintWriter pw = init(PrintWriter.class, this::createAuditTo);
         pw.printf("AUDIT: I am the Randomizer application!%n").flush();
         init(Random.class, this::createRandom);
         RandomizerResource randomizerResource = initAndRegisterJaxRsWsComponent(RandomizerResource.class, this::createGreetingResource);
         initHealth(new HealthProbe("randomizer.request.count", randomizerResource::getRequestCount));
-        return this;
     }
 
     private PrintWriter createAuditTo() {

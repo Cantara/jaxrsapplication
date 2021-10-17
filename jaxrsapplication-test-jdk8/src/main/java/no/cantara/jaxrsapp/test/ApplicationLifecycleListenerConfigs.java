@@ -7,6 +7,6 @@ import java.lang.annotation.Target;
 
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface MockRegistryConfigs {
-    MockRegistryConfig[] value() default {};
+public @interface ApplicationLifecycleListenerConfigs {
+    ApplicationLifecycleListenerConfig[] value() default {};
 }

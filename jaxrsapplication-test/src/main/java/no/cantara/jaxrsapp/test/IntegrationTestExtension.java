@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.Set;
-import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -29,12 +28,14 @@ import static java.util.Optional.ofNullable;
 
 public class IntegrationTestExtension implements BeforeEachCallback, BeforeAllCallback, AfterAllCallback {
 
-    Map<String, TestClient> client = new LinkedHashMap<>();
     Map<String, JaxRsServletApplication> applicationByProvider = new LinkedHashMap<>();
+    Map<String, TestClient> client = new LinkedHashMap<>();
+    Set<String> providerAliases = new LinkedHashSet<>();
+    Node root;
 
     @Override
-    public void beforeAll(ExtensionContext extensionContext) throws Exception {
-        Class<?> testClass = extensionContext.getRequiredTestClass();
+    public void beforeAll(ExtensionContext context) {
+        Class<?> testClass = context.getRequiredTestClass();
 
         JaxRsApplicationProvider jaxRsApplicationProvider = testClass.getDeclaredAnnotation(JaxRsApplicationProvider.class);
 
@@ -60,9 +61,7 @@ public class IntegrationTestExtension implements BeforeEachCallback, BeforeAllCa
                 providerAlias = jaxRsApplicationProvider.value()[0];
             }
 
-            ApplicationProperties.Builder configBuilder = resolveConfiguration(testClass, providerAlias);
-            ApplicationProperties config = configBuilder.build();
-            initTestApplication(testClass, providerAlias, config);
+            providerAliases.add(providerAlias);
 
         } else {
 
@@ -70,29 +69,42 @@ public class IntegrationTestExtension implements BeforeEachCallback, BeforeAllCa
              * Multi application
              */
 
-            Map<String, ApplicationProperties.Builder> configBuilderByAlias = resolveAllConfigurations(testClass, jaxRsApplicationProvider.value());
+            for (String providerAlias : jaxRsApplicationProvider.value()) {
+                providerAliases.add(providerAlias);
+            }
+        }
+    }
 
-            Node root = buildDependencyGraph(testClass, configBuilderByAlias, jaxRsApplicationProvider.value());
+    @Override
+    public void beforeEach(ExtensionContext context) {
+        Class<?> testClass = context.getRequiredTestClass();
+        Object testInstance = context.getRequiredTestInstance();
 
+        if (root == null) {
+            root = buildDependencyGraph(testClass, providerAliases);
             Set<Node> ancestors = new LinkedHashSet<>();
             NodeTraversals.depthFirstPostOrder(ancestors, root, node -> {
                 if (node == root) {
                     return;
                 }
+
                 String providerAlias = node.getId();
-                ApplicationProperties.Builder configBuilder = configBuilderByAlias.get(providerAlias);
+                ApplicationProperties.Builder configBuilder = node.get("config-builder");
+                ApplicationProperties config = configBuilder.build();
 
                 /*
                  * Initialize application
                  */
-                JaxRsServletApplication application = initTestApplication(testClass, providerAlias, configBuilder.build());
+                JaxRsServletApplication application = (JaxRsServletApplication) ProviderLoader.configure(config, providerAlias, JaxRsServletApplicationFactory.class);
+                applicationByProvider.put(providerAlias, application);
+                initTestApplication(application, testClass, testInstance, providerAlias, config);
 
                 if (node.getParents().get(0).equals(root)) {
                     return; // only meta-node root depends on this application
                 }
                 for (Node parent : node.getParents()) {
                     String parentConfigKey = parent.getAttribute("${" + providerAlias + ".port}");
-                    ApplicationProperties.Builder parentConfigBuilder = configBuilderByAlias.get(parent.getId());
+                    ApplicationProperties.Builder parentConfigBuilder = parent.get("config-builder");
 
                     /*
                      * Override expression with value of bound port
@@ -101,9 +113,59 @@ public class IntegrationTestExtension implements BeforeEachCallback, BeforeAllCa
                 }
             });
         }
+
+        for (Map.Entry<String, JaxRsServletApplication> entry : applicationByProvider.entrySet()) {
+            String key = entry.getKey();
+            JaxRsServletApplication application = entry.getValue();
+            if (!application.isInitialized()) {
+                ApplicationProperties config = application.get(ApplicationProperties.class);
+            }
+        }
+
+        Object test = context.getRequiredTestInstance();
+        Field[] fields = test.getClass().getDeclaredFields();
+        for (Field field : fields) {
+            if (!field.isAnnotationPresent(Inject.class)) {
+                continue;
+            }
+            String fieldNamed = null;
+            if (field.isAnnotationPresent(Named.class)) {
+                Named named = field.getDeclaredAnnotation(Named.class);
+                fieldNamed = named.value();
+            }
+            // application
+            if (JaxRsServletApplication.class.isAssignableFrom(field.getType())) {
+                try {
+                    field.setAccessible(true);
+                    if (field.get(test) == null) {
+                        if (fieldNamed != null) {
+                            field.set(test, applicationByProvider.get(fieldNamed));
+                        } else {
+                            field.set(test, applicationByProvider.values().iterator().next());
+                        }
+                    }
+                } catch (IllegalAccessException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            if (TestClient.class.isAssignableFrom(field.getType())) {
+                try {
+                    field.setAccessible(true);
+                    if (field.get(test) == null) {
+                        if (fieldNamed != null) {
+                            field.set(test, client.get(fieldNamed));
+                        } else {
+                            field.set(test, client.values().iterator().next());
+                        }
+                    }
+                } catch (IllegalAccessException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
     }
 
-    private Node buildDependencyGraph(Class<?> testClass, Map<String, ApplicationProperties.Builder> configBuilderByAlias, String[] providerAliases) {
+    private Node buildDependencyGraph(Class<?> testClass, Set<String> providerAliases) {
         final Node root = new Node(null, "root");
         final Map<String, Node> nodeById = new LinkedHashMap<>();
         final Set<String> patterns = new LinkedHashSet<>();
@@ -120,7 +182,7 @@ public class IntegrationTestExtension implements BeforeEachCallback, BeforeAllCa
         final Pattern pattern = Pattern.compile("\\$\\{([^.]+)[.]port}");
         for (Node node : nodes) {
             ApplicationProperties.Builder configBuilder = resolveConfiguration(testClass, node.getId());
-            configBuilderByAlias.put(node.getId(), configBuilder);
+            node.put("config-builder", configBuilder);
             ApplicationProperties config = configBuilder.build();
             for (Map.Entry<String, String> entry : config.map().entrySet()) {
                 String value = entry.getValue();
@@ -143,64 +205,6 @@ public class IntegrationTestExtension implements BeforeEachCallback, BeforeAllCa
             }
         }
         return root;
-    }
-
-    private Map<String, ApplicationProperties.Builder> resolveAllConfigurations(Class<?> testClass, String[] providerAliases) {
-        Map<String, ApplicationProperties.Builder> configByAlias = new LinkedHashMap<>();
-        for (String providerAlias : providerAliases) {
-            ApplicationProperties.Builder configBuilder = resolveConfiguration(testClass, providerAlias);
-            configByAlias.put(providerAlias, configBuilder);
-        }
-        return configByAlias;
-    }
-
-    private JaxRsServletApplication initTestApplication(Class<?> testClass, String providerAlias, ApplicationProperties config) {
-        JaxRsServletApplication application = (JaxRsServletApplication) ProviderLoader.configure(config, providerAlias, JaxRsServletApplicationFactory.class);
-        applicationByProvider.put(providerAlias, application);
-        application.override(ApplicationProperties.class, () -> config);
-
-        {
-            MockRegistryConfig mockRegistryConfig = testClass.getDeclaredAnnotation(MockRegistryConfig.class);
-            overrideWithMocks(application, providerAlias, mockRegistryConfig);
-        }
-        MockRegistryConfigs mockRegistryConfigs = testClass.getDeclaredAnnotation(MockRegistryConfigs.class);
-        if (mockRegistryConfigs != null) {
-            for (MockRegistryConfig mockRegistryConfig : mockRegistryConfigs.value()) {
-                overrideWithMocks(application, providerAlias, mockRegistryConfig);
-            }
-        }
-
-        application.init();
-        application.start();
-
-        int boundPort = application.getBoundPort();
-        client.put(providerAlias, TestClient.newClient("localhost", boundPort));
-
-        return application;
-    }
-
-    private void overrideWithMocks(JaxRsServletApplication application, String providerAlias, MockRegistryConfig mockRegistryConfig) {
-        if (mockRegistryConfig == null) {
-            return;
-        }
-        if (!mockRegistryConfig.application().isEmpty() && !mockRegistryConfig.application().equals(providerAlias)) {
-            return;
-        }
-        Class<? extends MockRegistry>[] registryClazzes = mockRegistryConfig.value();
-        for (Class<? extends MockRegistry> registryClazz : registryClazzes) {
-            Constructor<?> constructor = registryClazz.getDeclaredConstructors()[0];
-            MockRegistry mockRegistry;
-            try {
-                mockRegistry = (MockRegistry) constructor.newInstance();
-            } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
-                throw new RuntimeException(e);
-            }
-            mockRegistry.withJaxRsRegistry(application);
-            for (Class<?> mockClazz : mockRegistry) {
-                Supplier<?> factory = mockRegistry.getFactory(mockClazz);
-                application.override(mockClazz, factory);
-            }
-        }
     }
 
     private ApplicationProperties.Builder resolveConfiguration(Class<?> testClass, String providerAlias) {
@@ -252,48 +256,49 @@ public class IntegrationTestExtension implements BeforeEachCallback, BeforeAllCa
         configBuilder.map(configOverrideMap);
     }
 
-    @Override
-    public void beforeEach(ExtensionContext extensionContext) {
-        Object test = extensionContext.getRequiredTestInstance();
-        Field[] fields = test.getClass().getDeclaredFields();
-        for (Field field : fields) {
-            if (!field.isAnnotationPresent(Inject.class)) {
-                continue;
+    private JaxRsServletApplication initTestApplication(JaxRsServletApplication application, Class<?> testClass, Object testInstance, String providerAlias, ApplicationProperties config) {
+        {
+            ApplicationLifecycleListenerConfig applicationLifecycleListenerConfig = testClass.getDeclaredAnnotation(ApplicationLifecycleListenerConfig.class);
+            callBeforeInitLifecycleListeners(application, applicationLifecycleListenerConfig);
+        }
+        ApplicationLifecycleListenerConfigs applicationLifecycleListenerConfigs = testClass.getDeclaredAnnotation(ApplicationLifecycleListenerConfigs.class);
+        if (applicationLifecycleListenerConfigs != null) {
+            for (ApplicationLifecycleListenerConfig applicationLifecycleListenerConfig : applicationLifecycleListenerConfigs.value()) {
+                callBeforeInitLifecycleListeners(application, applicationLifecycleListenerConfig);
             }
-            String fieldNamed = null;
-            if (field.isAnnotationPresent(Named.class)) {
-                Named named = field.getDeclaredAnnotation(Named.class);
-                fieldNamed = named.value();
+        }
+
+        if (testInstance instanceof JaxRsServletApplicationLifecycleListener) {
+            JaxRsServletApplicationLifecycleListener applicationLifecycleListener = (JaxRsServletApplicationLifecycleListener) testInstance;
+            applicationLifecycleListener.beforeInit(application);
+        }
+
+        application.init();
+        application.start();
+
+        int boundPort = application.getBoundPort();
+        client.put(providerAlias, TestClient.newClient("localhost", boundPort));
+
+        return application;
+    }
+
+    private void callBeforeInitLifecycleListeners(JaxRsServletApplication application, ApplicationLifecycleListenerConfig lifecycleListenerConfig) {
+        if (lifecycleListenerConfig == null) {
+            return;
+        }
+        if (!lifecycleListenerConfig.application().isEmpty() && !lifecycleListenerConfig.application().equals(application.alias())) {
+            return;
+        }
+        Class<? extends JaxRsServletApplicationLifecycleListener>[] lifecycleListenerClazzes = lifecycleListenerConfig.value();
+        for (Class<? extends JaxRsServletApplicationLifecycleListener> lifecycleListenerClazz : lifecycleListenerClazzes) {
+            Constructor<?> constructor = lifecycleListenerClazz.getDeclaredConstructors()[0];
+            JaxRsServletApplicationLifecycleListener lifecycleListener;
+            try {
+                lifecycleListener = (JaxRsServletApplicationLifecycleListener) constructor.newInstance();
+            } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
+                throw new RuntimeException(e);
             }
-            // application
-            if (JaxRsServletApplication.class.isAssignableFrom(field.getType())) {
-                try {
-                    field.setAccessible(true);
-                    if (field.get(test) == null) {
-                        if (fieldNamed != null) {
-                            field.set(test, applicationByProvider.get(fieldNamed));
-                        } else {
-                            field.set(test, applicationByProvider.values().iterator().next());
-                        }
-                    }
-                } catch (IllegalAccessException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-            if (TestClient.class.isAssignableFrom(field.getType())) {
-                try {
-                    field.setAccessible(true);
-                    if (field.get(test) == null) {
-                        if (fieldNamed != null) {
-                            field.set(test, client.get(fieldNamed));
-                        } else {
-                            field.set(test, client.values().iterator().next());
-                        }
-                    }
-                } catch (IllegalAccessException e) {
-                    throw new RuntimeException(e);
-                }
-            }
+            lifecycleListener.beforeInit(application);
         }
     }
 

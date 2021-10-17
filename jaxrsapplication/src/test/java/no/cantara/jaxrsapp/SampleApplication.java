@@ -8,7 +8,6 @@ public class SampleApplication extends AbstractJaxRsServletApplication<SampleApp
     }
 
     @Override
-    public SampleApplication init() {
-        return this;
+    public void doInit() {
     }
 }

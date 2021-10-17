@@ -31,15 +31,15 @@ public class GreeterApplication extends AbstractJaxRsServletApplication<GreeterA
     }
 
     @Override
-    public GreeterApplication init() {
+    public void doInit() {
         initSecurity();
         PrintWriter pw = init(PrintWriter.class, this::createAuditTo);
         pw.printf("AUDIT: I am the Greeting application!%n").flush();
         init(GreetingCandidateRepository.class, this::createGreetingCandidateRepository);
         init(RandomizerClient.class, this::createHttpRandomizer);
+        GreetingService greetingService = initAndRegisterJaxRsWsComponent(GreetingService.class, this::createGreetingService);
         GreetingResource greetingResource = initAndRegisterJaxRsWsComponent(GreetingResource.class, this::createGreetingResource);
         initHealth(new HealthProbe("greeting.request.count", greetingResource::getRequestCount));
-        return this;
     }
 
     private PrintWriter createAuditTo() {
@@ -63,9 +63,14 @@ public class GreeterApplication extends AbstractJaxRsServletApplication<GreeterA
         return new HttpRandomizerClient("http://" + randomizerHost + ":" + randomizerPort + "/randomizer");
     }
 
-    private GreetingResource createGreetingResource() {
+    private GreetingService createGreetingService() {
         RandomizerClient randomizerClient = get(RandomizerClient.class);
         GreetingCandidateRepository greetingCandidateRepository = get(GreetingCandidateRepository.class);
-        return new GreetingResource(greetingCandidateRepository, randomizerClient);
+        return new GreetingService(greetingCandidateRepository, randomizerClient);
+    }
+
+    private GreetingResource createGreetingResource() {
+        GreetingService greetingService = get(GreetingService.class);
+        return new GreetingResource(greetingService);
     }
 }

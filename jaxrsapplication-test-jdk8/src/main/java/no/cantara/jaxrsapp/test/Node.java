@@ -12,6 +12,7 @@ public class Node {
     final String id;
     final List<Node> children = new LinkedList<>();
     final Map<String, String> attributes = new LinkedHashMap<>();
+    final Map<String, Object> objects = new LinkedHashMap<>();
 
     public Node(Node parent, String id) {
         Objects.requireNonNull(id);
@@ -41,6 +42,15 @@ public class Node {
 
     public String putAttribute(String key, String value) {
         return attributes.put(key, value);
+    }
+
+    public <T> T get(String key) {
+        return (T) objects.get(key);
+    }
+
+    public <T> Node put(String key, T instance) {
+        objects.put(key, instance);
+        return this;
     }
 
     @Override

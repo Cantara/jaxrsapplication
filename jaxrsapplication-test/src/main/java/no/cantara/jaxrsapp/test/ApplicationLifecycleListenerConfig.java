@@ -7,11 +7,11 @@ import java.lang.annotation.Target;
 
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface MockRegistryConfig {
+public @interface ApplicationLifecycleListenerConfig {
     /**
-     * A {@link MockRegistry} class to instantiate and use as to register.
+     * A {@link JaxRsServletApplicationLifecycleListener} class to instantiate and use as lifecycle-listener.
      */
-    Class<? extends MockRegistry>[] value();
+    Class<? extends JaxRsServletApplicationLifecycleListener>[] value();
 
     String application() default "";
 }

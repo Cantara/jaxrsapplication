@@ -2,7 +2,15 @@ package no.cantara.jaxrsapp;
 
 public interface JaxRsRegistry {
 
-    <T> JaxRsRegistry put(Class<T> clazz, T instance);
+    default <T> JaxRsRegistry put(Class<T> clazz, T instance) {
+        return put(clazz.getName(), instance);
+    }
 
-    <T> T get(Class<T> clazz);
+    default <T> T get(Class<T> clazz) {
+        return (T) get(clazz.getName());
+    }
+
+    <T> JaxRsRegistry put(String key, T instance);
+
+    <T> T get(String key);
 }

@@ -8,7 +8,6 @@ public class SampleApplicationJdk8 extends AbstractJaxRsServletApplication<Sampl
     }
 
     @Override
-    public SampleApplicationJdk8 init() {
-        return this;
+    protected void doInit() {
     }
 }

@@ -37,6 +37,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
 public abstract class AbstractJaxRsServletApplication<A extends AbstractJaxRsServletApplication<A>> implements JaxRsServletApplication<A>, JaxRsRegistry {
@@ -49,9 +50,10 @@ public abstract class AbstractJaxRsServletApplication<A extends AbstractJaxRsSer
     protected final Server server;
 
     protected final List<FilterSpec> filterSpecs = new CopyOnWriteArrayList<>();
-    protected final Map<Class<?>, Object> jaxRsWsComponentByType = new ConcurrentHashMap<>();
-    protected final Map<Class<?>, Object> singletonByType = new ConcurrentHashMap<>();
-    protected final Map<Class<?>, Supplier<Object>> initOverrides = new ConcurrentHashMap<>();
+    protected final Map<String, Object> jaxRsWsComponentByType = new ConcurrentHashMap<>();
+    protected final Map<String, Object> singletonByType = new ConcurrentHashMap<>();
+    protected final Map<String, Supplier<Object>> initOverrides = new ConcurrentHashMap<>();
+    protected final AtomicBoolean initialized = new AtomicBoolean(false);
 
     protected AbstractJaxRsServletApplication(String applicationAlias, ApplicationProperties config) {
         this.applicationAlias = applicationAlias;
@@ -70,43 +72,79 @@ public abstract class AbstractJaxRsServletApplication<A extends AbstractJaxRsSer
     }
 
     @Override
-    public A override(Class<?> clazz, Supplier<Object> init) {
-        initOverrides.put(clazz, init);
+    public String alias() {
+        return applicationAlias;
+    }
+
+    @Override
+    public ApplicationProperties config() {
+        return config;
+    }
+
+    @Override
+    public final A init() {
+        doInit();
+        initialized.set(true);
+        return (A) this;
+    }
+
+    protected abstract void doInit();
+
+    @Override
+    public boolean isInitialized() {
+        return initialized.get();
+    }
+
+    @Override
+    public A override(String key, Supplier<Object> init) {
+        initOverrides.put(key, init);
         return (A) this;
     }
 
     @Override
-    public <T> JaxRsRegistry put(Class<T> clazz, T instance) {
-        this.singletonByType.put(clazz, instance);
+    public <T> JaxRsRegistry put(String key, T instance) {
+        this.singletonByType.put(key, instance);
         return this;
     }
 
     @Override
-    public <T> T get(Class<T> clazz) {
-        return (T) this.singletonByType.get(clazz);
+    public <T> T get(String key) {
+        return (T) this.singletonByType.get(key);
     }
 
     protected <T extends Filter> T initAndAddServletFilter(Class<T> clazz, Supplier<T> filterSupplier, String pathSpec, EnumSet<DispatcherType> dispatches) {
-        T instance = init(clazz, filterSupplier);
-        filterSpecs.add(new FilterSpec(clazz, instance, pathSpec, dispatches));
+        return initAndAddServletFilter(clazz.getName(), filterSupplier, pathSpec, dispatches);
+    }
+
+    protected <T extends Filter> T initAndAddServletFilter(String key, Supplier<T> filterSupplier, String pathSpec, EnumSet<DispatcherType> dispatches) {
+        T instance = init(key, filterSupplier);
+        filterSpecs.add(new FilterSpec(key, instance, pathSpec, dispatches));
         return instance;
     }
 
     protected <T> T initAndRegisterJaxRsWsComponent(Class<T> clazz, Supplier<T> init) {
-        T instance = init(clazz, init);
-        jaxRsWsComponentByType.put(clazz, instance);
+        return initAndRegisterJaxRsWsComponent(clazz.getName(), init);
+    }
+
+    protected <T> T initAndRegisterJaxRsWsComponent(String key, Supplier<T> init) {
+        T instance = init(key, init);
+        jaxRsWsComponentByType.put(key, instance);
         return instance;
     }
 
     protected <T> T init(Class<T> clazz, Supplier<T> init) {
-        Supplier<T> initOverride = (Supplier<T>) initOverrides.get(clazz);
+        return init(clazz.getName(), init);
+    }
+
+    protected <T> T init(String key, Supplier<T> init) {
+        Supplier<T> initOverride = (Supplier<T>) initOverrides.get(key);
         T instance;
         if (initOverride != null) {
             instance = initOverride.get();
         } else {
             instance = init.get();
         }
-        put(clazz, instance);
+        put(key, instance);
         return instance;
     }
 
@@ -118,12 +156,16 @@ public abstract class AbstractJaxRsServletApplication<A extends AbstractJaxRsSer
             put(ServletContextHandler.class, servletContextHandler);
             server.setHandler(servletContextHandler);
             server.start();
+            initAfterStart();
         } catch (RuntimeException e) {
             throw e;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
         return (A) this;
+    }
+
+    protected void initAfterStart() {
     }
 
     @Override
@@ -160,13 +202,13 @@ public abstract class AbstractJaxRsServletApplication<A extends AbstractJaxRsSer
     }
 
     protected static class FilterSpec {
-        protected final Class<? extends Filter> clazz;
+        protected final String key;
         protected final Filter filter;
         protected final String pathSpec;
         protected final EnumSet<DispatcherType> dispatches;
 
-        public FilterSpec(Class<? extends Filter> clazz, Filter filter, String pathSpec, EnumSet<DispatcherType> dispatches) {
-            this.clazz = clazz;
+        public FilterSpec(String key, Filter filter, String pathSpec, EnumSet<DispatcherType> dispatches) {
+            this.key = key;
             this.filter = filter;
             this.pathSpec = pathSpec;
             this.dispatches = dispatches;
