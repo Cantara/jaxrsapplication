@@ -294,11 +294,18 @@ public class IntegrationTestExtension implements BeforeEachCallback, BeforeAllCa
             lifecycleListener.afterInit(application);
         }
 
-        application.start();
+        application.start(false);
 
         if (testInstance instanceof AfterStartLifecycleListener) {
             AfterStartLifecycleListener lifecycleListener = (AfterStartLifecycleListener) testInstance;
             lifecycleListener.afterStart(application);
+        }
+
+        application.postInit();
+
+        if (testInstance instanceof AfterPostInitLifecycleListener) {
+            AfterPostInitLifecycleListener lifecycleListener = (AfterPostInitLifecycleListener) testInstance;
+            lifecycleListener.afterPostInit(application);
         }
 
         int boundPort = application.getBoundPort();

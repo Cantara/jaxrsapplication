@@ -148,24 +148,41 @@ public abstract class AbstractJaxRsServletApplication<A extends AbstractJaxRsSer
         return instance;
     }
 
-    @Override
-    public A start() {
+    public A doStart() {
         try {
             ResourceConfig resourceConfig = ResourceConfig.forApplication(application);
             ServletContextHandler servletContextHandler = createServletContextHandler(resourceConfig);
             put(ServletContextHandler.class, servletContextHandler);
             server.setHandler(servletContextHandler);
             server.start();
-            initAfterStart();
+            return (A) this;
         } catch (RuntimeException e) {
             throw e;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    public final A start(boolean alsoRunPostInitAfterStart) {
+        doStart();
+        if (alsoRunPostInitAfterStart) {
+            postInit();
+        }
         return (A) this;
     }
 
-    protected void initAfterStart() {
+    public final A start() {
+        return start(true);
+    }
+
+    @Override
+    public final A postInit() {
+        doPostInit();
+        return (A) this;
+    }
+
+    protected void doPostInit() {
     }
 
     @Override

@@ -20,7 +20,11 @@ public interface JaxRsServletApplication<A extends JaxRsServletApplication> exte
 
     A override(String key, Supplier<Object> init);
 
+    A start(boolean alsoRunPostInitAfterStart);
+
     A start();
+
+    A postInit();
 
     A stop();
 
