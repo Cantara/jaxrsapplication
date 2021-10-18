@@ -5,11 +5,11 @@
     <parent>
         <groupId>no.cantara.jaxrsapp</groupId>
         <artifactId>samples</artifactId>
-        <version>0.5.2-SNAPSHOT</version>
+        <version>0.5.2</version>
     </parent>
 
     <artifactId>randomizer</artifactId>
-    <version>0.5.2-SNAPSHOT</version>
+    <version>0.5.2</version>
     <packaging>jar</packaging>
 
     <name>Sample-Randomizer</name>
