@@ -90,7 +90,10 @@ public class IntegrationTestExtension implements BeforeEachCallback, BeforeAllCa
 
                 String providerAlias = node.getId();
                 ApplicationProperties.Builder configBuilder = node.get("config-builder");
-                ApplicationProperties config = configBuilder.build();
+                ApplicationProperties config = configBuilder
+                        .enableSystemProperties()
+                        .enableEnvironmentVariables()
+                        .build();
 
                 /*
                  * Initialize application
@@ -209,19 +212,37 @@ public class IntegrationTestExtension implements BeforeEachCallback, BeforeAllCa
 
     private ApplicationProperties.Builder resolveConfiguration(Class<?> testClass, String providerAlias) {
         ApplicationProperties.Builder configBuilder = ApplicationProperties.builder()
-                .classpathPropertiesFile(providerAlias + "/application.properties")
-                .testDefaults();
+                .classpathPropertiesFile("application.properties")
+                .classpathPropertiesFile(providerAlias + "/application.properties");
         String profile = ofNullable(System.getProperty("config.profile"))
                 .orElseGet(() -> ofNullable(System.getenv("CONFIG_PROFILE"))
                         .orElse(providerAlias) // default
                 );
-        if (profile != null) {
+        {
             String preProfileFilename = String.format("%s-application.properties", profile);
             String postProfileFilename = String.format("application-%s.properties", profile);
             configBuilder.classpathPropertiesFile(preProfileFilename);
             configBuilder.classpathPropertiesFile(postProfileFilename);
             configBuilder.filesystemPropertiesFile(preProfileFilename);
             configBuilder.filesystemPropertiesFile(postProfileFilename);
+            configBuilder.filesystemPropertiesFile("gitignore/application.properties");
+            configBuilder.filesystemPropertiesFile("gitignore/" + preProfileFilename);
+            configBuilder.filesystemPropertiesFile("gitignore/" + postProfileFilename);
+            configBuilder.filesystemPropertiesFile("gitignore/" + profile + ".properties");
+        }
+        {
+            configBuilder.classpathPropertiesFile("test_override.properties");
+            String preProfileFilename = String.format("%s-test.properties", profile);
+            String postProfileFilename = String.format("test-%s.properties", profile);
+            configBuilder.classpathPropertiesFile(preProfileFilename);
+            configBuilder.classpathPropertiesFile(postProfileFilename);
+            configBuilder.classpathPropertiesFile(providerAlias + "/" + preProfileFilename);
+            configBuilder.classpathPropertiesFile(providerAlias + "/" + postProfileFilename);
+            configBuilder.classpathPropertiesFile(providerAlias + "/test_override.properties");
+            configBuilder.filesystemPropertiesFile("gitignore/test_override.properties");
+            configBuilder.filesystemPropertiesFile("gitignore/" + preProfileFilename);
+            configBuilder.filesystemPropertiesFile("gitignore/" + postProfileFilename);
+            configBuilder.filesystemPropertiesFile("gitignore/" + profile + ".properties");
         }
         String overrideFile = ofNullable(System.getProperty("config.file"))
                 .orElseGet(() -> System.getenv("CONFIG_FILE"));
