@@ -16,9 +16,11 @@ public interface JaxRsServletApplicationFactory<A extends JaxRsServletApplicatio
         String postProfileFilename = String.format("application-%s.properties", profile);
         {
             builder.classpathPropertiesFile("application.properties");
-            builder.classpathPropertiesFile(alias() + "/application.properties");
+            builder.classpathPropertiesFile(profile + "/application.properties");
             builder.classpathPropertiesFile(preProfileFilename);
             builder.classpathPropertiesFile(postProfileFilename);
+            builder.classpathPropertiesFile(profile + ".properties");
+            builder.filesystemPropertiesFile("local_override.properties");
             builder.filesystemPropertiesFile(preProfileFilename);
             builder.filesystemPropertiesFile(postProfileFilename);
             builder.filesystemPropertiesFile("gitignore/application.properties");
