@@ -2,7 +2,8 @@ package no.cantara.jaxrsapp.sample.greeter;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.inject.Inject;
-import no.cantara.jaxrsapp.test.ApplicationLifecycleListenerConfig;
+import no.cantara.jaxrsapp.JaxRsServletApplication;
+import no.cantara.jaxrsapp.test.BeforeInitLifecycleListener;
 import no.cantara.jaxrsapp.test.IntegrationTestExtension;
 import no.cantara.jaxrsapp.test.TestClient;
 import org.apache.http.HttpHeaders;
@@ -11,14 +12,18 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@ApplicationLifecycleListenerConfig(GreetingLifeCycleListener.class)
 @ExtendWith(IntegrationTestExtension.class)
-public class GreetingTest {
+public class GreetingTest implements BeforeInitLifecycleListener {
 
     private static final Logger log = LoggerFactory.getLogger(GreetingTest.class);
 
     @Inject
     TestClient testClient;
+
+    @Override
+    public void beforeInit(JaxRsServletApplication application) {
+        application.override(RandomizerClient.class, () -> RandomizerClientMock.createMockRandomizer(application));
+    }
 
     @Test
     public void thatGreetingCanBeTestedByItself() {

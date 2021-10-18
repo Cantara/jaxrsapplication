@@ -1,19 +1,12 @@
 package no.cantara.jaxrsapp.sample.greeter;
 
 import no.cantara.jaxrsapp.JaxRsRegistry;
-import no.cantara.jaxrsapp.JaxRsServletApplication;
-import no.cantara.jaxrsapp.test.JaxRsServletApplicationLifecycleListener;
 
 import java.util.Objects;
 
-public class GreetingLifeCycleListener implements JaxRsServletApplicationLifecycleListener {
+public class RandomizerClientMock {
 
-    @Override
-    public void beforeInit(JaxRsServletApplication application) {
-        application.override(RandomizerClient.class, () -> createMockRandomizer(application));
-    }
-
-    private RandomizerClient createMockRandomizer(JaxRsRegistry registry) {
+    static RandomizerClient createMockRandomizer(JaxRsRegistry registry) {
         GreetingCandidateRepository greetingCandidateRepository = registry.get(GreetingCandidateRepository.class);
         Objects.requireNonNull(greetingCandidateRepository); // test that registry is wired correctly
         return new RandomizerClient() {

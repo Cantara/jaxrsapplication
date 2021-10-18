@@ -3,11 +3,11 @@ package no.cantara.jaxrsapp.sample.randomizer;
 import no.cantara.config.ApplicationProperties;
 import no.cantara.config.ProviderLoader;
 import no.cantara.jaxrsapp.JaxRsServletApplication;
-import no.cantara.jaxrsapp.test.JaxRsServletApplicationLifecycleListener;
+import no.cantara.jaxrsapp.test.BeforeInitLifecycleListener;
 import no.cantara.security.authorization.AccessManager;
 import no.cantara.security.authorization.AccessManagerFactory;
 
-public class RandomizerApplicationLifecycleListener implements JaxRsServletApplicationLifecycleListener {
+public class RandomizerApplicationLifecycleListener implements BeforeInitLifecycleListener {
 
     @Override
     public void beforeInit(JaxRsServletApplication application) {

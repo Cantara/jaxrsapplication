@@ -20,18 +20,18 @@ public class RandomizerTest {
     @Test
     public void thatViewerCanDoAllExceptReseed() {
         testClient.useAuthorization("Bearer fake-application-id: junit-viewer");
-        log.info("/randomizer/str/10 Response: {}", testClient.get(String.class, "/randomizer/str/10").expect200Ok().body());
-        log.info("/randomizer/int/1000 Response: {}", testClient.get(String.class, "/randomizer/int/1000").expect200Ok().body());
-        log.info("/randomizer/health Response: {}", testClient.get(JsonNode.class, "/randomizer/health").expect200Ok().body().toPrettyString());
+        log.info("GET /randomizer/str/10 Response: {}", testClient.get(String.class, "/randomizer/str/10").expect200Ok().body());
+        log.info("GET /randomizer/int/1000 Response: {}", testClient.get(String.class, "/randomizer/int/1000").expect200Ok().body());
+        log.info("GET /randomizer/health Response: {}", testClient.get(JsonNode.class, "/randomizer/health").expect200Ok().body().toPrettyString());
         testClient.put(JsonNode.class, "/randomizer/seed/12345").expect403Forbidden();
     }
 
     @Test
     public void thatAdminCanDoAllExceptReseed() {
         testClient.useAuthorization("Bearer fake-application-id: junit-admin");
-        log.info("/randomizer/str/10 Response: {}", testClient.get(String.class, "/randomizer/str/10").expect200Ok().body());
-        log.info("/randomizer/int/1000 Response: {}", testClient.get(String.class, "/randomizer/int/1000").expect200Ok().body());
-        log.info("/randomizer/health Response: {}", testClient.get(JsonNode.class, "/randomizer/health").expect200Ok().body().toPrettyString());
+        log.info("GET /randomizer/str/10 Response: {}", testClient.get(String.class, "/randomizer/str/10").expect200Ok().body());
+        log.info("GET /randomizer/int/1000 Response: {}", testClient.get(String.class, "/randomizer/int/1000").expect200Ok().body());
+        log.info("GET /randomizer/health Response: {}", testClient.get(JsonNode.class, "/randomizer/health").expect200Ok().body().toPrettyString());
         testClient.put(JsonNode.class, "/randomizer/seed/12345").expect200Ok();
     }
 }

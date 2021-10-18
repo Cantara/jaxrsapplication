@@ -11,9 +11,7 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 
 import javax.inject.Inject;
 import javax.inject.Named;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
@@ -90,10 +88,15 @@ public class IntegrationTestExtension implements BeforeEachCallback, BeforeAllCa
 
                 String providerAlias = node.getId();
                 ApplicationProperties.Builder configBuilder = node.get("config-builder");
-                ApplicationProperties config = configBuilder
-                        .enableSystemProperties()
-                        .enableEnvironmentVariables()
-                        .build();
+                configBuilder.enableSystemProperties()
+                        .enableEnvironmentVariables();
+
+                if (testInstance instanceof BeforeCreationLifecycleListener) {
+                    BeforeCreationLifecycleListener lifecycleListener = (BeforeCreationLifecycleListener) testInstance;
+                    lifecycleListener.beforeCreation(configBuilder);
+                }
+
+                ApplicationProperties config = configBuilder.build();
 
                 /*
                  * Initialize application
@@ -278,49 +281,30 @@ public class IntegrationTestExtension implements BeforeEachCallback, BeforeAllCa
     }
 
     private JaxRsServletApplication initTestApplication(JaxRsServletApplication application, Class<?> testClass, Object testInstance, String providerAlias, ApplicationProperties config) {
-        {
-            ApplicationLifecycleListenerConfig applicationLifecycleListenerConfig = testClass.getDeclaredAnnotation(ApplicationLifecycleListenerConfig.class);
-            callBeforeInitLifecycleListeners(application, applicationLifecycleListenerConfig);
-        }
-        ApplicationLifecycleListenerConfigs applicationLifecycleListenerConfigs = testClass.getDeclaredAnnotation(ApplicationLifecycleListenerConfigs.class);
-        if (applicationLifecycleListenerConfigs != null) {
-            for (ApplicationLifecycleListenerConfig applicationLifecycleListenerConfig : applicationLifecycleListenerConfigs.value()) {
-                callBeforeInitLifecycleListeners(application, applicationLifecycleListenerConfig);
-            }
-        }
 
-        if (testInstance instanceof JaxRsServletApplicationLifecycleListener) {
-            JaxRsServletApplicationLifecycleListener applicationLifecycleListener = (JaxRsServletApplicationLifecycleListener) testInstance;
-            applicationLifecycleListener.beforeInit(application);
+        if (testInstance instanceof BeforeInitLifecycleListener) {
+            BeforeInitLifecycleListener lifecycleListener = (BeforeInitLifecycleListener) testInstance;
+            lifecycleListener.beforeInit(application);
         }
 
         application.init();
+
+        if (testInstance instanceof AfterInitLifecycleListener) {
+            AfterInitLifecycleListener lifecycleListener = (AfterInitLifecycleListener) testInstance;
+            lifecycleListener.afterInit(application);
+        }
+
         application.start();
+
+        if (testInstance instanceof AfterStartLifecycleListener) {
+            AfterStartLifecycleListener lifecycleListener = (AfterStartLifecycleListener) testInstance;
+            lifecycleListener.afterStart(application);
+        }
 
         int boundPort = application.getBoundPort();
         client.put(providerAlias, TestClient.newClient("localhost", boundPort));
 
         return application;
-    }
-
-    private void callBeforeInitLifecycleListeners(JaxRsServletApplication application, ApplicationLifecycleListenerConfig lifecycleListenerConfig) {
-        if (lifecycleListenerConfig == null) {
-            return;
-        }
-        if (!lifecycleListenerConfig.application().isEmpty() && !lifecycleListenerConfig.application().equals(application.alias())) {
-            return;
-        }
-        Class<? extends JaxRsServletApplicationLifecycleListener>[] lifecycleListenerClazzes = lifecycleListenerConfig.value();
-        for (Class<? extends JaxRsServletApplicationLifecycleListener> lifecycleListenerClazz : lifecycleListenerClazzes) {
-            Constructor<?> constructor = lifecycleListenerClazz.getDeclaredConstructors()[0];
-            JaxRsServletApplicationLifecycleListener lifecycleListener;
-            try {
-                lifecycleListener = (JaxRsServletApplicationLifecycleListener) constructor.newInstance();
-            } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
-                throw new RuntimeException(e);
-            }
-            lifecycleListener.beforeInit(application);
-        }
     }
 
     @Override

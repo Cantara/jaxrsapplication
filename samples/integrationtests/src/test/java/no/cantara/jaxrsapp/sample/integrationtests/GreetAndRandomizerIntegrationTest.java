@@ -1,34 +1,39 @@
-package no.cantara.jaxrsapp.sample.integrationtests.example1;
+package no.cantara.jaxrsapp.sample.integrationtests;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
+import no.cantara.jaxrsapp.JaxRsRegistry;
 import no.cantara.jaxrsapp.JaxRsServletApplication;
 import no.cantara.jaxrsapp.sample.greeter.Greeting;
+import no.cantara.jaxrsapp.sample.greeter.GreetingCandidate;
+import no.cantara.jaxrsapp.sample.greeter.GreetingCandidateRepository;
 import no.cantara.jaxrsapp.sample.greeter.GreetingService;
-import no.cantara.jaxrsapp.test.ApplicationLifecycleListenerConfig;
-import no.cantara.jaxrsapp.test.ApplicationLifecycleListenerConfigs;
+import no.cantara.jaxrsapp.test.BeforeInitLifecycleListener;
 import no.cantara.jaxrsapp.test.ConfigOverride;
 import no.cantara.jaxrsapp.test.ConfigOverrides;
 import no.cantara.jaxrsapp.test.IntegrationTestExtension;
 import no.cantara.jaxrsapp.test.JaxRsApplicationProvider;
 import no.cantara.jaxrsapp.test.TestClient;
+import no.cantara.security.authorization.AccessManager;
 import org.apache.http.HttpHeaders;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.PrintWriter;
+import java.security.SecureRandom;
+import java.util.List;
+import java.util.Objects;
+import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 @JaxRsApplicationProvider({"greeter", "randomizer"})
 @ExtendWith(IntegrationTestExtension.class)
-@ApplicationLifecycleListenerConfigs({
-        @ApplicationLifecycleListenerConfig(application = "greeter", value = GreetingLifecycleListener.class),
-        @ApplicationLifecycleListenerConfig(application = "randomizer", value = RandomizerLifecycleListener.class)
-})
-@ApplicationLifecycleListenerConfig(AllApplicationsLifecycleListener.class)
 @ConfigOverrides({
         @ConfigOverride(application = "greeter", value = {
                 "randomizer.host", "localhost",
@@ -39,9 +44,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         "authentication.provider", "fake",
         "server.port", "0"
 })
-public class GreetAndRandomizerExample1IntegrationTest {
+public class GreetAndRandomizerIntegrationTest implements BeforeInitLifecycleListener {
 
-    private static final Logger log = LoggerFactory.getLogger(GreetAndRandomizerExample1IntegrationTest.class);
+    private static final Logger log = LoggerFactory.getLogger(GreetAndRandomizerIntegrationTest.class);
 
     @Inject
     @Named("greeter")
@@ -54,6 +59,43 @@ public class GreetAndRandomizerExample1IntegrationTest {
     @Inject
     @Named("randomizer")
     TestClient randomizerClient;
+
+    @Override
+    public void beforeInit(JaxRsServletApplication application) {
+        // global (factory used by all applications)
+        application.override(PrintWriter.class, () -> new PrintWriter(System.out));
+
+        String alias = application.alias();
+        if ("greeter".equals(alias)) {
+            application.override(GreetingCandidateRepository.class, () -> createGreetingCandidateRepository(application));
+        } else if ("randomizer".equals(alias)) {
+            application.override(Random.class, SecureRandom::new);
+        } else {
+            Assertions.fail(String.format("Unknown application initialized. Alias: '%s'", alias));
+        }
+    }
+
+    private GreetingCandidateRepository createGreetingCandidateRepository(JaxRsRegistry registry) {
+        AccessManager accessManager = registry.get(AccessManager.class);
+        Objects.requireNonNull(accessManager); // assert that security has been initialized
+        return new GreetingCandidateRepository() {
+            @Override
+            public List<GreetingCandidate> greetingCandidates() {
+                return List.of(
+                        new GreetingCandidate("Mock-1"),
+                        new GreetingCandidate("Mock-2"),
+                        new GreetingCandidate("Mock-3"),
+                        new GreetingCandidate("Mock-4"),
+                        new GreetingCandidate("Mock-5"),
+                        new GreetingCandidate("Mock-6"),
+                        new GreetingCandidate("Mock-7"),
+                        new GreetingCandidate("Mock-8"),
+                        new GreetingCandidate("Mock-9"),
+                        new GreetingCandidate("Mock-10")
+                );
+            }
+        };
+    }
 
     @Test
     public void thatHealthOfGreetingAndRandomizerBothWorks() {
