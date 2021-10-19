@@ -34,4 +34,10 @@ public class RandomizerTest {
         log.info("GET /randomizer/health Response: {}", testClient.get(JsonNode.class, "/randomizer/health").expect200Ok().body().toPrettyString());
         testClient.put(JsonNode.class, "/randomizer/seed/12345").expect200Ok();
     }
+
+    @Test
+    public void thatOpenApiWorks() {
+        String openApiYaml = testClient.get(String.class, "/randomizer/openapi.yaml").expect200Ok().body();
+        log.info("/randomizer/openapi.yaml:\n{}", openApiYaml);
+    }
 }

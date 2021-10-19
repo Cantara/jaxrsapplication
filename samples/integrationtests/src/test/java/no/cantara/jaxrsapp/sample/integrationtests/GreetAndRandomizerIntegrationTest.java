@@ -125,4 +125,16 @@ public class GreetAndRandomizerIntegrationTest implements BeforeInitLifecycleLis
             assertTrue(greeting.getGreeting().startsWith("Mock-")); // assert that mocks are used
         }
     }
+
+    @Test
+    public void thatGreetingOpenApiWorks() {
+        String openApiYaml = greeterClient.get(String.class, "/greet/openapi.yaml").expect200Ok().body();
+        log.info("/greet/openapi.yaml:\n{}", openApiYaml);
+    }
+
+    @Test
+    public void thatRandomizerOpenApiWorks() {
+        String openApiYaml = randomizerClient.get(String.class, "/randomizer/openapi.yaml").expect200Ok().body();
+        log.info("/randomizer/openapi.yaml:\n{}", openApiYaml);
+    }
 }

@@ -1,5 +1,10 @@
 package no.cantara.jaxrsapp.sample.greeter;
 
+import io.swagger.v3.oas.integration.SwaggerConfiguration;
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.servers.Server;
+import jakarta.servlet.DispatcherType;
 import no.cantara.config.ApplicationProperties;
 import no.cantara.jaxrsapp.AbstractJaxRsServletApplication;
 import no.cantara.jaxrsapp.health.HealthProbe;
@@ -7,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.PrintWriter;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -33,6 +39,8 @@ public class GreeterApplication extends AbstractJaxRsServletApplication<GreeterA
     @Override
     public void doInit() {
         initSecurity();
+        initAndAddServletFilter(CORSServletFilter.class, CORSServletFilter::new, "/*", EnumSet.allOf(DispatcherType.class));
+        initAndRegisterJaxRsWsComponent(JaxRsOpenApiResource.class.getName(), this::createOpenApiResource);
         PrintWriter pw = init(PrintWriter.class, this::createAuditTo);
         pw.printf("AUDIT: I am the Greeting application!%n").flush();
         init(GreetingCandidateRepository.class, this::createGreetingCandidateRepository);
@@ -40,6 +48,27 @@ public class GreeterApplication extends AbstractJaxRsServletApplication<GreeterA
         GreetingService greetingService = initAndRegisterJaxRsWsComponent(GreetingService.class, this::createGreetingService);
         GreetingResource greetingResource = initAndRegisterJaxRsWsComponent(GreetingResource.class, this::createGreetingResource);
         initHealth(new HealthProbe("greeting.request.count", greetingResource::getRequestCount));
+    }
+
+    private JaxRsOpenApiResource createOpenApiResource() {
+        Info info = new Info()
+                .title("Greeting API")
+                .description("RESTful greetings for you.");
+        OpenAPI oas = new OpenAPI()
+                .info(info)
+                .addServersItem(new Server().url("/" + alias()))
+                .addServersItem(new Server() {
+                    @Override
+                    public String getUrl() {
+                        return "http://localhost:" + getBoundPort() + "/" + alias();
+                    }
+                });
+        SwaggerConfiguration oasConfig = new SwaggerConfiguration()
+                .openAPI(oas)
+                .prettyPrint(true);
+        JaxRsOpenApiResource openApiResource = (JaxRsOpenApiResource) new JaxRsOpenApiResource()
+                .openApiConfiguration(oasConfig);
+        return openApiResource;
     }
 
     private PrintWriter createAuditTo() {
