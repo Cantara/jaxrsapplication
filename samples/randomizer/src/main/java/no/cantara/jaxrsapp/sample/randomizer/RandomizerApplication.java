@@ -54,13 +54,13 @@ public class RandomizerApplication extends AbstractJaxRsServletApplication<Rando
         String contextPath = config.get("server.context-path");
         OpenAPI oas = new OpenAPI()
                 .info(info)
-                .addServersItem(new Server().url(contextPath))
                 .addServersItem(new Server() {
                     @Override
                     public String getUrl() {
                         return "http://localhost:" + getBoundPort() + contextPath;
                     }
-                });
+                })
+                .addServersItem(new Server().url(contextPath));
         SwaggerConfiguration oasConfig = new SwaggerConfiguration()
                 .openAPI(oas)
                 .prettyPrint(true);
