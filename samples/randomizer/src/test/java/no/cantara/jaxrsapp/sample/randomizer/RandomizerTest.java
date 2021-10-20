@@ -27,7 +27,7 @@ public class RandomizerTest {
     }
 
     @Test
-    public void thatAdminCanDoAllExceptReseed() {
+    public void thatAdminCanDoAll() {
         testClient.useAuthorization("Bearer fake-application-id: junit-admin");
         log.info("GET /randomizer/str/10 Response: {}", testClient.get(String.class, "/randomizer/str/10").expect200Ok().body());
         log.info("GET /randomizer/int/1000 Response: {}", testClient.get(String.class, "/randomizer/int/1000").expect200Ok().body());
