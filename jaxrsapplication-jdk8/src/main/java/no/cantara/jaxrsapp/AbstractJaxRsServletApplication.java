@@ -33,6 +33,7 @@ import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -103,13 +104,25 @@ public abstract class AbstractJaxRsServletApplication<A extends AbstractJaxRsSer
 
     @Override
     public <T> JaxRsRegistry put(String key, T instance) {
+        Objects.requireNonNull(key);
+        Objects.requireNonNull(instance);
         this.singletonByType.put(key, instance);
         return this;
     }
 
     @Override
     public <T> T get(String key) {
-        return (T) this.singletonByType.get(key);
+        T instance = (T) this.singletonByType.get(key);
+        if (instance == null) {
+            throw new NoSuchElementException(key);
+        }
+        return instance;
+    }
+
+    @Override
+    public <T> T getOrNull(String key) {
+        T instance = (T) this.singletonByType.get(key);
+        return instance;
     }
 
     protected <T extends Filter> T initAndAddServletFilter(Class<T> clazz, Supplier<T> filterSupplier, String pathSpec, EnumSet<DispatcherType> dispatches) {

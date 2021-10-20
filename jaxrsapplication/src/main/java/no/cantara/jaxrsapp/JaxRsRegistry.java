@@ -1,5 +1,7 @@
 package no.cantara.jaxrsapp;
 
+import java.util.function.Supplier;
+
 public interface JaxRsRegistry {
 
     default <T> JaxRsRegistry put(Class<T> clazz, T instance) {
@@ -13,4 +15,22 @@ public interface JaxRsRegistry {
     <T> JaxRsRegistry put(String key, T instance);
 
     <T> T get(String key);
+
+    <T> T getOrNull(String key);
+
+    default <T> T getOrDefault(String key, T defaultValue) {
+        T instance = getOrNull(key);
+        if (instance == null) {
+            return defaultValue;
+        }
+        return instance;
+    }
+
+    default <T> T getOrDefault(String key, Supplier<T> defaultSupplier) {
+        T instance = getOrNull(key);
+        if (instance == null) {
+            return defaultSupplier.get();
+        }
+        return instance;
+    }
 }
