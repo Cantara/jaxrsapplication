@@ -26,9 +26,9 @@ import static java.util.Optional.ofNullable;
 
 public class IntegrationTestExtension implements BeforeEachCallback, BeforeAllCallback, AfterAllCallback {
 
-    Map<String, JaxRsServletApplication> applicationByProvider = new LinkedHashMap<>();
-    Map<String, TestClient> client = new LinkedHashMap<>();
-    Set<String> providerAliases = new LinkedHashSet<>();
+    Map<String, JaxRsServletApplication> applicationByAlias = new LinkedHashMap<>();
+    Map<String, TestClient> clientByAlias = new LinkedHashMap<>();
+    Set<String> applicationAliases = new LinkedHashSet<>();
     Node root;
 
     @Override
@@ -59,7 +59,7 @@ public class IntegrationTestExtension implements BeforeEachCallback, BeforeAllCa
                 providerAlias = jaxRsApplicationProvider.value()[0];
             }
 
-            providerAliases.add(providerAlias);
+            applicationAliases.add(providerAlias);
 
         } else {
 
@@ -68,7 +68,7 @@ public class IntegrationTestExtension implements BeforeEachCallback, BeforeAllCa
              */
 
             for (String providerAlias : jaxRsApplicationProvider.value()) {
-                providerAliases.add(providerAlias);
+                applicationAliases.add(providerAlias);
             }
         }
     }
@@ -79,7 +79,7 @@ public class IntegrationTestExtension implements BeforeEachCallback, BeforeAllCa
         Object testInstance = context.getRequiredTestInstance();
 
         if (root == null) {
-            root = buildDependencyGraph(testClass, providerAliases);
+            root = buildDependencyGraph(testClass, applicationAliases);
             Set<Node> ancestors = new LinkedHashSet<>();
             NodeTraversals.depthFirstPostOrder(ancestors, root, node -> {
                 if (node == root) {
@@ -102,8 +102,8 @@ public class IntegrationTestExtension implements BeforeEachCallback, BeforeAllCa
                  * Initialize application
                  */
                 JaxRsServletApplication application = (JaxRsServletApplication) ProviderLoader.configure(config, providerAlias, JaxRsServletApplicationFactory.class);
-                applicationByProvider.put(providerAlias, application);
-                initTestApplication(application, testClass, testInstance, providerAlias, config);
+                applicationByAlias.put(providerAlias, application);
+                initTestApplication(application, testInstance, providerAlias);
 
                 if (node.getParents().get(0).equals(root)) {
                     return; // only meta-node root depends on this application
@@ -120,7 +120,7 @@ public class IntegrationTestExtension implements BeforeEachCallback, BeforeAllCa
             });
         }
 
-        for (Map.Entry<String, JaxRsServletApplication> entry : applicationByProvider.entrySet()) {
+        for (Map.Entry<String, JaxRsServletApplication> entry : applicationByAlias.entrySet()) {
             String key = entry.getKey();
             JaxRsServletApplication application = entry.getValue();
             if (!application.isInitialized()) {
@@ -145,9 +145,9 @@ public class IntegrationTestExtension implements BeforeEachCallback, BeforeAllCa
                     field.setAccessible(true);
                     if (field.get(test) == null) {
                         if (fieldNamed != null) {
-                            field.set(test, applicationByProvider.get(fieldNamed));
+                            field.set(test, applicationByAlias.get(fieldNamed));
                         } else {
-                            field.set(test, applicationByProvider.values().iterator().next());
+                            field.set(test, applicationByAlias.values().iterator().next());
                         }
                     }
                 } catch (IllegalAccessException e) {
@@ -159,9 +159,9 @@ public class IntegrationTestExtension implements BeforeEachCallback, BeforeAllCa
                     field.setAccessible(true);
                     if (field.get(test) == null) {
                         if (fieldNamed != null) {
-                            field.set(test, client.get(fieldNamed));
+                            field.set(test, clientByAlias.get(fieldNamed));
                         } else {
-                            field.set(test, client.values().iterator().next());
+                            field.set(test, clientByAlias.values().iterator().next());
                         }
                     }
                 } catch (IllegalAccessException e) {
@@ -214,44 +214,12 @@ public class IntegrationTestExtension implements BeforeEachCallback, BeforeAllCa
     }
 
     private ApplicationProperties.Builder resolveConfiguration(Class<?> testClass, String providerAlias) {
-        ApplicationProperties.Builder configBuilder = ApplicationProperties.builder()
-                .classpathPropertiesFile("application.properties")
-                .classpathPropertiesFile(providerAlias + "/application.properties");
         String profile = ofNullable(System.getProperty("config.profile"))
                 .orElseGet(() -> ofNullable(System.getenv("CONFIG_PROFILE"))
                         .orElse(providerAlias) // default
                 );
-        {
-            String preProfileFilename = String.format("%s-application.properties", profile);
-            String postProfileFilename = String.format("application-%s.properties", profile);
-            configBuilder.classpathPropertiesFile(preProfileFilename);
-            configBuilder.classpathPropertiesFile(postProfileFilename);
-            configBuilder.filesystemPropertiesFile(preProfileFilename);
-            configBuilder.filesystemPropertiesFile(postProfileFilename);
-            configBuilder.filesystemPropertiesFile("gitignore/application.properties");
-            configBuilder.filesystemPropertiesFile("gitignore/" + preProfileFilename);
-            configBuilder.filesystemPropertiesFile("gitignore/" + postProfileFilename);
-            configBuilder.filesystemPropertiesFile("gitignore/" + profile + ".properties");
-        }
-        {
-            configBuilder.classpathPropertiesFile("test_override.properties");
-            String preProfileFilename = String.format("%s-test.properties", profile);
-            String postProfileFilename = String.format("test-%s.properties", profile);
-            configBuilder.classpathPropertiesFile(preProfileFilename);
-            configBuilder.classpathPropertiesFile(postProfileFilename);
-            configBuilder.classpathPropertiesFile(providerAlias + "/" + preProfileFilename);
-            configBuilder.classpathPropertiesFile(providerAlias + "/" + postProfileFilename);
-            configBuilder.classpathPropertiesFile(providerAlias + "/test_override.properties");
-            configBuilder.filesystemPropertiesFile("gitignore/test_override.properties");
-            configBuilder.filesystemPropertiesFile("gitignore/" + preProfileFilename);
-            configBuilder.filesystemPropertiesFile("gitignore/" + postProfileFilename);
-            configBuilder.filesystemPropertiesFile("gitignore/" + profile + ".properties");
-        }
-        String overrideFile = ofNullable(System.getProperty("config.file"))
-                .orElseGet(() -> System.getenv("CONFIG_FILE"));
-        if (overrideFile != null) {
-            configBuilder.filesystemPropertiesFile(overrideFile);
-        }
+        ApplicationProperties.Builder configBuilder = ApplicationProperties.builder();
+        ConfigTestUtils.conventions(configBuilder, profile);
         {
             ConfigOverride configOverride = testClass.getDeclaredAnnotation(ConfigOverride.class);
             overrideConfig(configBuilder, configOverride, providerAlias);
@@ -280,7 +248,7 @@ public class IntegrationTestExtension implements BeforeEachCallback, BeforeAllCa
         configBuilder.map(configOverrideMap);
     }
 
-    private JaxRsServletApplication initTestApplication(JaxRsServletApplication application, Class<?> testClass, Object testInstance, String providerAlias, ApplicationProperties config) {
+    private JaxRsServletApplication initTestApplication(JaxRsServletApplication application, Object testInstance, String providerAlias) {
 
         if (testInstance instanceof BeforeInitLifecycleListener) {
             BeforeInitLifecycleListener lifecycleListener = (BeforeInitLifecycleListener) testInstance;
@@ -309,14 +277,14 @@ public class IntegrationTestExtension implements BeforeEachCallback, BeforeAllCa
         }
 
         int boundPort = application.getBoundPort();
-        client.put(providerAlias, TestClient.newClient("localhost", boundPort));
+        clientByAlias.put(providerAlias, TestClient.newClient("localhost", boundPort));
 
         return application;
     }
 
     @Override
     public void afterAll(ExtensionContext extensionContext) {
-        for (Map.Entry<String, JaxRsServletApplication> entry : applicationByProvider.entrySet()) {
+        for (Map.Entry<String, JaxRsServletApplication> entry : applicationByAlias.entrySet()) {
             JaxRsServletApplication application = entry.getValue();
             application.stop();
         }
