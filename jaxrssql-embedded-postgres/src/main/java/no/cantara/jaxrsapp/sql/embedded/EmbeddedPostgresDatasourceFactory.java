@@ -15,19 +15,7 @@ public class EmbeddedPostgresDatasourceFactory implements JaxRsSqlDatasourceFact
     }
 
     @Override
-    public EmbeddedPostgresDatasource create(ApplicationProperties applicationProperties) {
-        /*
-         * Used for testing purposes, so we return the one-and-only singleton.
-         */
-        return EmbeddedPostgresDatasourceHolder.postgresDatasource;
-    }
-
-    private static class EmbeddedPostgresDatasourceHolder {
-        private static final EmbeddedPostgresDatasource postgresDatasource;
-
-        static {
-            postgresDatasource = new EmbeddedPostgresDatasource();
-            postgresDatasource.migrate();
-        }
+    public EmbeddedPostgresDatasource create(ApplicationProperties config) {
+        return new EmbeddedPostgresDatasource();
     }
 }

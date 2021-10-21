@@ -23,30 +23,35 @@ public class HikariDatasourceTest {
                 .classpathPropertiesFile("hikari.properties")
                 .build();
         JaxRsSqlDatasource jaxRsSqlDatasource = ProviderLoader.configure(config, "hikari", JaxRsSqlDatasourceFactory.class);
-        jaxRsSqlDatasource.migrate();
-        DataSource dataSource = jaxRsSqlDatasource.getDataSource();
-        String generatedPersonId = UUID.randomUUID().toString();
-        try (Connection connection = dataSource.getConnection()) {
-            try (PreparedStatement ps = connection.prepareStatement("INSERT INTO Person(person_id, firstname, lastname) VALUES(?,?,?)")) {
-                ps.setString(1, generatedPersonId);
-                ps.setString(2, "John");
-                ps.setString(3, "Smith");
-                int n = ps.executeUpdate();
-                assertEquals(1, n);
-            }
-            try (PreparedStatement ps = connection.prepareStatement("SELECT person_id, firstname, lastname FROM Person WHERE person_id = ?")) {
-                ps.setString(1, generatedPersonId);
-                try (ResultSet rs = ps.executeQuery()) {
-                    while (rs.next()) {
-                        String personId = rs.getString(1);
-                        String firstname = rs.getString(2);
-                        String lastname = rs.getString(3);
-                        assertEquals(generatedPersonId, personId);
-                        assertEquals("John", firstname);
-                        assertEquals("Smith", lastname);
+        try {
+            FlywayMigrationHelper flywayMigrationHelper = new FlywayMigrationHelper(jaxRsSqlDatasource, "db/migration");
+            flywayMigrationHelper.upgradeDatabase();
+            DataSource dataSource = jaxRsSqlDatasource.getDataSource();
+            String generatedPersonId = UUID.randomUUID().toString();
+            try (Connection connection = dataSource.getConnection()) {
+                try (PreparedStatement ps = connection.prepareStatement("INSERT INTO Person(person_id, firstname, lastname) VALUES(?,?,?)")) {
+                    ps.setString(1, generatedPersonId);
+                    ps.setString(2, "John");
+                    ps.setString(3, "Smith");
+                    int n = ps.executeUpdate();
+                    assertEquals(1, n);
+                }
+                try (PreparedStatement ps = connection.prepareStatement("SELECT person_id, firstname, lastname FROM Person WHERE person_id = ?")) {
+                    ps.setString(1, generatedPersonId);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        while (rs.next()) {
+                            String personId = rs.getString(1);
+                            String firstname = rs.getString(2);
+                            String lastname = rs.getString(3);
+                            assertEquals(generatedPersonId, personId);
+                            assertEquals("John", firstname);
+                            assertEquals("Smith", lastname);
+                        }
                     }
                 }
             }
+        } finally {
+            jaxRsSqlDatasource.close();
         }
     }
 }

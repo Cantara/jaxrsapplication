@@ -12,11 +12,6 @@ public interface JaxRsSqlDatasource {
     DataSource getDataSource();
 
     /**
-     * Migrate schema of datasource according to this applications configured schema ddl files.
-     */
-    void migrate();
-
-    /**
      * @return Information about the datasource configuration. Used for debugging and health-info.
      */
     String info();

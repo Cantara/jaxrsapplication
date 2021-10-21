@@ -1,7 +1,6 @@
 package no.cantara.jaxrsapp.sql.hikari;
 
 import com.zaxxer.hikari.HikariDataSource;
-import no.cantara.jaxrsapp.sql.DefaultDatabaseMigrationHelper;
 import no.cantara.jaxrsapp.sql.JaxRsSqlDatasource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,12 +16,6 @@ public class HikariDatasource implements JaxRsSqlDatasource {
 
     public HikariDataSource getDataSource() {
         return dataSource;
-    }
-
-    @Override
-    public void migrate() {
-        DefaultDatabaseMigrationHelper defaultDatabaseMigrationHelper = new DefaultDatabaseMigrationHelper(dataSource);
-        defaultDatabaseMigrationHelper.upgradeDatabase();
     }
 
     @Override

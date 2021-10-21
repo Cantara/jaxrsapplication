@@ -1,7 +1,6 @@
 package no.cantara.jaxrsapp.sql.embedded;
 
 import io.zonky.test.db.postgres.embedded.EmbeddedPostgres;
-import io.zonky.test.db.postgres.embedded.FlywayPreparer;
 import no.cantara.jaxrsapp.sql.JaxRsSqlDatasource;
 
 import javax.sql.DataSource;
@@ -17,16 +16,24 @@ import java.sql.SQLException;
 
 public class EmbeddedPostgresDatasource implements JaxRsSqlDatasource {
 
+    private static class EmbeddedPostgresSingletonHolder {
+        private static final EmbeddedPostgres embeddedPostgres;
+
+        static {
+            try {
+                embeddedPostgres = EmbeddedPostgres.start();
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }
+    }
+
     final EmbeddedPostgres embeddedPostgres;
     final DataSource dataSource;
 
     public EmbeddedPostgresDatasource() {
-        try {
-            this.embeddedPostgres = EmbeddedPostgres.start();
-            this.dataSource = embeddedPostgres.getPostgresDatabase();
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
+        this.embeddedPostgres = EmbeddedPostgresSingletonHolder.embeddedPostgres;
+        this.dataSource = embeddedPostgres.getPostgresDatabase();
     }
 
     public EmbeddedPostgres getEmbeddedPostgres() {
@@ -38,25 +45,17 @@ public class EmbeddedPostgresDatasource implements JaxRsSqlDatasource {
     }
 
     @Override
-    public void migrate() {
-        FlywayPreparer flywayPreparer = FlywayPreparer.forClasspathLocation("db/migration");
-        try {
-            flywayPreparer.prepare(embeddedPostgres.getPostgresDatabase());
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    @Override
     public String info() {
         return "embedded-postgres-to-be-used-only-for-testing";
     }
 
     @Override
     public void close() {
-        /*
-         * Do not close anything, as the underlying embedded-postgres might be re-used in another test after this close.
-         */
+        try {
+            embeddedPostgres.close();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     public void clearTables() {
