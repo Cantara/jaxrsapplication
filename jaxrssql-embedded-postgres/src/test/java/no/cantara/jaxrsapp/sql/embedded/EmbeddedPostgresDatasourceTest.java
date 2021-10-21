@@ -21,7 +21,7 @@ public class EmbeddedPostgresDatasourceTest {
     private void createDatabase(ApplicationProperties config) {
         JaxRsSqlDatasource jaxRsSqlDatasource = ProviderLoader.configure(config.subTree("flyway.creation.config"), "embedded", JaxRsSqlDatasourceFactory.class);
         FlywayMigrationHelper flywayMigrationHelper = FlywayMigrationHelper.defaultCreation(
-                jaxRsSqlDatasource,
+                "schema_version", jaxRsSqlDatasource,
                 config.get("flyway.migration.config.dataSource.databaseName"),
                 config.get("flyway.migration.config.dataSource.user"),
                 config.get("flyway.migration.config.dataSource.password"),
@@ -36,7 +36,7 @@ public class EmbeddedPostgresDatasourceTest {
     private void migrateDatabase(ApplicationProperties config) {
         JaxRsSqlDatasource jaxRsSqlDatasource = ProviderLoader.configure(config.subTree("flyway.migration.config"), "embedded", JaxRsSqlDatasourceFactory.class);
         FlywayMigrationHelper flywayMigrationHelper = FlywayMigrationHelper.forMigration(
-                jaxRsSqlDatasource,
+                "schema_version", "db/migration", jaxRsSqlDatasource,
                 config.get("database.config.dataSource.user")
         );
         flywayMigrationHelper.upgradeDatabase();
