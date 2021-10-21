@@ -34,7 +34,7 @@ public class HikariDatasourceTest {
     private void migrateDatabase(ApplicationProperties config) {
         JaxRsSqlDatasource jaxRsSqlDatasource = ProviderLoader.configure(config.subTree("flyway.migration.config"), "embedded", JaxRsSqlDatasourceFactory.class);
         FlywayMigrationHelper flywayMigrationHelper = FlywayMigrationHelper.forMigration(
-                "schema_version", "db/migration", jaxRsSqlDatasource,
+                "db/migration", jaxRsSqlDatasource,
                 config.get("database.config.dataSource.user")
         );
         flywayMigrationHelper.upgradeDatabase();

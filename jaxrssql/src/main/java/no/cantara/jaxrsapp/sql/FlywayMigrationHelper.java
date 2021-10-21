@@ -17,7 +17,7 @@ public class FlywayMigrationHelper {
     private final JaxRsSqlDatasource jaxRsSqlDatasource;
 
     public static FlywayMigrationHelper defaultCreation(
-            String schemaTable,
+            String applicationAlias,
             JaxRsSqlDatasource jaxRsSqlDatasource,
             String migrationDatabase,
             String migrationUser,
@@ -25,11 +25,11 @@ public class FlywayMigrationHelper {
             String database,
             String user,
             String password) {
-        return forCreation(schemaTable, "db/default-creation", jaxRsSqlDatasource, migrationDatabase, migrationUser, migrationPassword, database, user, password);
+        return forCreation(applicationAlias, "db/default-creation", jaxRsSqlDatasource, migrationDatabase, migrationUser, migrationPassword, database, user, password);
     }
 
     public static FlywayMigrationHelper forCreation(
-            String schemaTable,
+            String applicationAlias,
             String flywayMigrationFolder,
             JaxRsSqlDatasource jaxRsSqlDatasource,
             String migrationDatabase,
@@ -45,26 +45,38 @@ public class FlywayMigrationHelper {
         placeholders.put("app.database", database);
         placeholders.put("app.user", user);
         placeholders.put("app.password", password);
-        return new FlywayMigrationHelper(jaxRsSqlDatasource, flywayMigrationFolder, placeholders, schemaTable);
+        return new FlywayMigrationHelper(jaxRsSqlDatasource, flywayMigrationFolder, placeholders, applicationAlias);
     }
 
     public static FlywayMigrationHelper forMigration(
-            String schemaTable,
             String flywayMigrationFolder,
             JaxRsSqlDatasource jaxRsSqlDatasource,
             String user) {
         Map<String, String> placeholders = new LinkedHashMap<>();
         placeholders.put("app.user", user);
-        return new FlywayMigrationHelper(jaxRsSqlDatasource, flywayMigrationFolder, placeholders, schemaTable);
+        return new FlywayMigrationHelper(jaxRsSqlDatasource, flywayMigrationFolder, placeholders);
     }
 
-    public FlywayMigrationHelper(JaxRsSqlDatasource jaxRsSqlDatasource, String flywayMigrationFolder, Map<String, String> placeholders, String schemaTable) {
+    public FlywayMigrationHelper(JaxRsSqlDatasource jaxRsSqlDatasource, String flywayMigrationFolder, Map<String, String> placeholders, String applicationAlias) {
         this.jaxRsSqlDatasource = jaxRsSqlDatasource;
         this.info = jaxRsSqlDatasource.info();
         flyway = Flyway.configure()
                 .baselineOnMigrate(false)
                 .locations(flywayMigrationFolder)
-                .table(schemaTable)
+                .table("schema_version")
+                .schemas(applicationAlias)
+                .createSchemas(true)
+                .placeholders(placeholders)
+                .dataSource(jaxRsSqlDatasource.getDataSource()).load();
+    }
+
+    public FlywayMigrationHelper(JaxRsSqlDatasource jaxRsSqlDatasource, String flywayMigrationFolder, Map<String, String> placeholders) {
+        this.jaxRsSqlDatasource = jaxRsSqlDatasource;
+        this.info = jaxRsSqlDatasource.info();
+        flyway = Flyway.configure()
+                .baselineOnMigrate(false)
+                .locations(flywayMigrationFolder)
+                .table("schema_version")
                 .placeholders(placeholders)
                 .dataSource(jaxRsSqlDatasource.getDataSource()).load();
     }
