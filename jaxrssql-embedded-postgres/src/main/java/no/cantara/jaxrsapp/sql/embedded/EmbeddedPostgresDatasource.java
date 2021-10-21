@@ -13,6 +13,8 @@ import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class EmbeddedPostgresDatasource implements JaxRsSqlDatasource {
 
@@ -29,11 +31,15 @@ public class EmbeddedPostgresDatasource implements JaxRsSqlDatasource {
     }
 
     final EmbeddedPostgres embeddedPostgres;
-    final DataSource dataSource;
+    final String dbName;
+    final String userName;
+    final String password;
 
-    public EmbeddedPostgresDatasource() {
+    public EmbeddedPostgresDatasource(String dbName, String userName, String password) {
+        this.dbName = dbName;
+        this.userName = userName;
+        this.password = password;
         this.embeddedPostgres = EmbeddedPostgresSingletonHolder.embeddedPostgres;
-        this.dataSource = embeddedPostgres.getPostgresDatabase();
     }
 
     public EmbeddedPostgres getEmbeddedPostgres() {
@@ -41,7 +47,11 @@ public class EmbeddedPostgresDatasource implements JaxRsSqlDatasource {
     }
 
     public DataSource getDataSource() {
-        return embeddedPostgres.getPostgresDatabase();
+        Map<String, String> properties = new LinkedHashMap<>();
+        if (password != null && !password.trim().isEmpty()) {
+            properties.put("password", this.password);
+        }
+        return embeddedPostgres.getDatabase(userName, dbName, properties);
     }
 
     @Override
@@ -51,11 +61,9 @@ public class EmbeddedPostgresDatasource implements JaxRsSqlDatasource {
 
     @Override
     public void close() {
-        try {
-            embeddedPostgres.close();
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
+        /*
+         * Do not close anything, as the underlying embedded-postgres might be re-used in another test after this close.
+         */
     }
 
     public void clearTables() {

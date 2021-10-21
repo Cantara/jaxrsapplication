@@ -16,6 +16,9 @@ public class EmbeddedPostgresDatasourceFactory implements JaxRsSqlDatasourceFact
 
     @Override
     public EmbeddedPostgresDatasource create(ApplicationProperties config) {
-        return new EmbeddedPostgresDatasource();
+        String databaseName = config.get("dataSource.databaseName");
+        String user = config.get("dataSource.user");
+        String password = config.get("dataSource.password");
+        return new EmbeddedPostgresDatasource(databaseName, user, password);
     }
 }

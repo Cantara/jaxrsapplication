@@ -18,13 +18,40 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class EmbeddedPostgresDatasourceTest {
 
+    private void createDatabase(ApplicationProperties config) {
+        JaxRsSqlDatasource jaxRsSqlDatasource = ProviderLoader.configure(config.subTree("flyway.creation.config"), "embedded", JaxRsSqlDatasourceFactory.class);
+        FlywayMigrationHelper flywayMigrationHelper = FlywayMigrationHelper.defaultCreation(
+                jaxRsSqlDatasource,
+                config.get("flyway.migration.config.dataSource.databaseName"),
+                config.get("flyway.migration.config.dataSource.user"),
+                config.get("flyway.migration.config.dataSource.password"),
+                config.get("database.config.dataSource.databaseName"),
+                config.get("database.config.dataSource.user"),
+                config.get("database.config.dataSource.password")
+        );
+        flywayMigrationHelper.upgradeDatabase();
+        jaxRsSqlDatasource.close();
+    }
+
+    private void migrateDatabase(ApplicationProperties config) {
+        JaxRsSqlDatasource jaxRsSqlDatasource = ProviderLoader.configure(config.subTree("flyway.migration.config"), "embedded", JaxRsSqlDatasourceFactory.class);
+        FlywayMigrationHelper flywayMigrationHelper = FlywayMigrationHelper.forMigration(
+                jaxRsSqlDatasource,
+                config.get("database.config.dataSource.user")
+        );
+        flywayMigrationHelper.upgradeDatabase();
+        jaxRsSqlDatasource.close();
+    }
+
     @Test
     public void thatEmbeddedDataSourceWorks() throws SQLException {
-        ApplicationProperties config = ApplicationProperties.builder().build();
-        JaxRsSqlDatasource jaxRsSqlDatasource = ProviderLoader.configure(config, "embedded", JaxRsSqlDatasourceFactory.class);
+        ApplicationProperties config = ApplicationProperties.builder()
+                .classpathPropertiesFile("embedded.properties")
+                .build();
+        createDatabase(config);
+        migrateDatabase(config);
+        JaxRsSqlDatasource jaxRsSqlDatasource = ProviderLoader.configure(config.subTree("database.config"), "embedded", JaxRsSqlDatasourceFactory.class);
         try {
-            FlywayMigrationHelper flywayMigrationHelper = new FlywayMigrationHelper(jaxRsSqlDatasource, "db/migration");
-            flywayMigrationHelper.upgradeDatabase();
             DataSource dataSource = jaxRsSqlDatasource.getDataSource();
             String generatedPersonId = UUID.randomUUID().toString();
             try (Connection connection = dataSource.getConnection()) {

@@ -16,16 +16,43 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class HikariDatasourceTest {
 
+    private void createDatabase(ApplicationProperties config) {
+        JaxRsSqlDatasource jaxRsSqlDatasource = ProviderLoader.configure(config.subTree("flyway.creation.config"), "embedded", JaxRsSqlDatasourceFactory.class);
+        FlywayMigrationHelper flywayMigrationHelper = FlywayMigrationHelper.defaultCreation(
+                jaxRsSqlDatasource,
+                config.get("flyway.migration.config.dataSource.databaseName"),
+                config.get("flyway.migration.config.dataSource.user"),
+                config.get("flyway.migration.config.dataSource.password"),
+                config.get("database.config.dataSource.databaseName"),
+                config.get("database.config.dataSource.user"),
+                config.get("database.config.dataSource.password")
+        );
+        flywayMigrationHelper.upgradeDatabase();
+        jaxRsSqlDatasource.close();
+    }
+
+    private void migrateDatabase(ApplicationProperties config) {
+        JaxRsSqlDatasource jaxRsSqlDatasource = ProviderLoader.configure(config.subTree("flyway.migration.config"), "embedded", JaxRsSqlDatasourceFactory.class);
+        FlywayMigrationHelper flywayMigrationHelper = FlywayMigrationHelper.forMigration(
+                jaxRsSqlDatasource,
+                config.get("database.config.dataSource.user")
+        );
+        flywayMigrationHelper.upgradeDatabase();
+        jaxRsSqlDatasource.close();
+    }
+
     @Test
     @Disabled
     public void thatHikariDataSourceWorks() throws SQLException {
         ApplicationProperties config = ApplicationProperties.builder()
                 .classpathPropertiesFile("hikari.properties")
                 .build();
-        JaxRsSqlDatasource jaxRsSqlDatasource = ProviderLoader.configure(config, "hikari", JaxRsSqlDatasourceFactory.class);
+        createDatabase(config);
+        migrateDatabase(config);
+        JaxRsSqlDatasource jaxRsSqlDatasource = ProviderLoader.configure(config.subTree("database.config"), "embedded", JaxRsSqlDatasourceFactory.class);
         try {
-            FlywayMigrationHelper flywayMigrationHelper = new FlywayMigrationHelper(jaxRsSqlDatasource, "db/migration");
-            flywayMigrationHelper.upgradeDatabase();
+            //FlywayMigrationHelper flywayMigrationHelper = FlywayMigrationHelper.forCreation(jaxRsSqlDatasource, "");
+            //flywayMigrationHelper.upgradeDatabase();
             DataSource dataSource = jaxRsSqlDatasource.getDataSource();
             String generatedPersonId = UUID.randomUUID().toString();
             try (Connection connection = dataSource.getConnection()) {
