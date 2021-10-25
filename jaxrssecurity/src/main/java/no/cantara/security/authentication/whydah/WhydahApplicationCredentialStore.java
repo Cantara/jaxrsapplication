@@ -1,4 +1,4 @@
-package no.cantara.security.whydah;
+package no.cantara.security.authentication.whydah;
 
 import net.whydah.sso.application.types.ApplicationCredential;
 import net.whydah.sso.session.WhydahApplicationSession;

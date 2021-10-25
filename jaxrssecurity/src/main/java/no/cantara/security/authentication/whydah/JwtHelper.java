@@ -1,4 +1,4 @@
-package no.cantara.security.whydah;
+package no.cantara.security.authentication.whydah;
 
 import com.auth0.jwk.Jwk;
 import com.auth0.jwk.JwkException;

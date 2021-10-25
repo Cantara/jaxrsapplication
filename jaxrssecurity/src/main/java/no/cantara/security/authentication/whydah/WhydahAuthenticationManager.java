@@ -1,4 +1,4 @@
-package no.cantara.security.authentication;
+package no.cantara.security.authentication.whydah;
 
 import com.auth0.jwk.JwkException;
 import com.auth0.jwt.exceptions.JWTDecodeException;
@@ -8,26 +8,45 @@ import net.whydah.sso.commands.userauth.CommandCreateTicketForUserTokenID;
 import net.whydah.sso.commands.userauth.CommandGetUserTokenByUserTicket;
 import net.whydah.sso.commands.userauth.CommandValidateUserTokenId;
 import net.whydah.sso.user.mappers.UserTokenMapper;
+import net.whydah.sso.user.types.UserApplicationRoleEntry;
 import net.whydah.sso.user.types.UserToken;
-import no.cantara.security.whydah.JwtHelper;
-import no.cantara.security.whydah.WhydahApplicationCredentialStore;
+import no.cantara.security.authentication.ApplicationAuthentication;
+import no.cantara.security.authentication.AuthenticationManager;
+import no.cantara.security.authentication.AuthenticationResult;
+import no.cantara.security.authentication.CantaraApplicationAuthentication;
+import no.cantara.security.authentication.CantaraAuthenticationResult;
+import no.cantara.security.authentication.CantaraUserAuthentication;
+import no.cantara.security.authentication.UnauthorizedException;
+import no.cantara.security.authentication.UserAuthentication;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.URI;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 public class WhydahAuthenticationManager implements AuthenticationManager {
 
     private static final Logger log = LoggerFactory.getLogger(WhydahAuthenticationManager.class);
 
+    private final Set<String> roleNamesFilter;
     private final String oauth2Uri;
     private final WhydahApplicationCredentialStore applicationCredentialStore;
+    private final WhydahService whydahService;
 
-    public WhydahAuthenticationManager(String oauth2Uri, WhydahApplicationCredentialStore applicationCredentialStore) {
+    public WhydahAuthenticationManager(Collection<String> roleNamesFilter, String oauth2Uri, WhydahApplicationCredentialStore applicationCredentialStore) {
+        this.roleNamesFilter = roleNamesFilter.stream()
+                .map(String::trim)
+                .map(String::toLowerCase)
+                .collect(Collectors.toSet());
         this.oauth2Uri = oauth2Uri;
         this.applicationCredentialStore = applicationCredentialStore;
+        this.whydahService = new WhydahService(applicationCredentialStore.getApplicationSession());
     }
 
     public UserAuthentication authenticateAsUser(String authorizationHeader) throws UnauthorizedException {
@@ -93,6 +112,7 @@ public class WhydahAuthenticationManager implements AuthenticationManager {
         String ssoId;
         String customerRef;
         Supplier<String> forwardingTokenGenerator = () -> token; // forwarding incoming token by default
+        Supplier<Map<String, String>> rolesGenerator;
         if (token.length() > 50) {
             log.debug("Suspected JWT-token is {}", token);
         } else {
@@ -104,6 +124,17 @@ public class WhydahAuthenticationManager implements AuthenticationManager {
             ssoId = jwtUtils.getUserNameFromJwtToken(token);
             customerRef = jwtUtils.getCustomerRefFromJwtToken(token);
             usertokenid = jwtUtils.getUserTokenFromJwtToken(token);
+            final String theUserTokenId = usertokenid;
+            rolesGenerator = () -> {
+                UserToken userToken = whydahService.findUserTokenFromUserTokenId(theUserTokenId);
+                if (userToken == null) {
+                    return Collections.emptyMap();
+                }
+                Map<String, String> roleValueByName = userToken.getRoleList().stream()
+                        .filter(re -> roleNamesFilter.contains(re.getRoleName().toLowerCase()))
+                        .collect(Collectors.toMap(UserApplicationRoleEntry::getRoleName, UserApplicationRoleEntry::getRoleValue));
+                return roleValueByName;
+            };
             log.debug("Resolved JWT-token. Found customerRef {} and usertokenid {}", customerRef, usertokenid);
         } catch (JWTDecodeException e) {
             log.debug("JWTDecoding threw exception", e);
@@ -136,6 +167,12 @@ public class WhydahAuthenticationManager implements AuthenticationManager {
                             throw new RuntimeException(String.format("Unable to generate user-ticket for user. ssoId=%s, customerRef=%s", theSsoId, theCustomerRef));
                         }
                         return forwardingUserTicket;
+                    };
+                    rolesGenerator = () -> {
+                        Map<String, String> roleValueByName = userToken.getRoleList().stream()
+                                .filter(re -> roleNamesFilter.contains(re.getRoleName().toLowerCase()))
+                                .collect(Collectors.toMap(UserApplicationRoleEntry::getRoleName, UserApplicationRoleEntry::getRoleValue));
+                        return roleValueByName;
                     };
                     log.debug("Resolved Whydah-userticket. Found customerRef {} and usertokenid {}", customerRef, usertokenid);
                 } else {
@@ -173,7 +210,7 @@ public class WhydahAuthenticationManager implements AuthenticationManager {
         }
         log.debug("Sucessful user authentication");
 
-        return new CantaraUserAuthentication(ssoId, customerRef, forwardingTokenGenerator);
+        return new CantaraUserAuthentication(ssoId, ssoId, usertokenid, customerRef, forwardingTokenGenerator, rolesGenerator);
     }
 }
 

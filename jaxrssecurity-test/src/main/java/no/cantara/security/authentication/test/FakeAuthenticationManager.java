@@ -9,6 +9,9 @@ import no.cantara.security.authentication.CantaraUserAuthentication;
 import no.cantara.security.authentication.UnauthorizedException;
 import no.cantara.security.authentication.UserAuthentication;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -16,14 +19,17 @@ public class FakeAuthenticationManager implements AuthenticationManager {
 
     public static final String BEARER_TOKEN_UNAUTHORIZED = "Bearer unauthorized";
 
-    static final Pattern fakeUserTokenPattern = Pattern.compile("Bearer\\s+fake-sso-id:\\s*(?<ssoid>[^,]*),\\s*fake-customer-ref:\\s*(?<customerref>.*)");
+    static final Pattern fakeUserTokenPattern = Pattern.compile("Bearer\\s+fake-sso-id:\\s*(?<ssoid>[^,]*),\\s*(?:fake-username:\\s*(?<username>[^,]*),)?\\s*(?:fake-usertoken-id:\\s*(?<usertokenid>[^,]*),)?\\s*fake-customer-ref:\\s*(?<customerref>[^,]*)(?:,\\s*fake-roles:\\s*(?<roles>.*))?");
     static final Pattern fakeApplicationTokenPattern = Pattern.compile("Bearer\\s+fake-application-id:\\s*(?<applicationid>.*)");
 
     private final UserAuthentication fakeUser;
     private final ApplicationAuthentication fakeApplication;
 
-    public FakeAuthenticationManager(String defaultFakeUserId, String defaultFakeCustomerRef, String defaultFakeApplicationId) {
-        fakeUser = new CantaraUserAuthentication(defaultFakeUserId, defaultFakeCustomerRef, () -> String.format("fake-sso-id: %s, fake-customer-ref: %s", defaultFakeUserId, defaultFakeCustomerRef));
+    public FakeAuthenticationManager(String defaultFakeUserId, String defaultFakeUsername, String defaultFakeUsertokenId, String defaultFakeCustomerRef, String defaultFakeApplicationId) {
+        fakeUser = new CantaraUserAuthentication(defaultFakeUserId, defaultFakeUsername, defaultFakeUsertokenId, defaultFakeCustomerRef, () -> String.format("fake-sso-id: %s, fake-customer-ref: %s", defaultFakeUserId, defaultFakeCustomerRef), () -> {
+            Map<String, String> roles = new LinkedHashMap<>();
+            return roles;
+        });
         fakeApplication = new CantaraApplicationAuthentication(defaultFakeApplicationId, String.format("fake-application-id: %s", defaultFakeApplicationId));
     }
 
@@ -40,8 +46,26 @@ public class FakeAuthenticationManager implements AuthenticationManager {
         Matcher m = fakeUserTokenPattern.matcher(authorizationHeader);
         if (m.matches()) {
             String ssoId = m.group("ssoid");
+            String username = m.group("username");
+            if (username == null) {
+                username = ssoId;
+            }
+            String usertokenId = m.group("usertokenid");
+            if (usertokenId == null) {
+                usertokenId = UUID.randomUUID().toString();
+            }
             String customerRef = m.group("customerref");
-            return new CantaraUserAuthentication(ssoId, customerRef, () -> String.format("fake-sso-id: %s, fake-customer-ref: %s", ssoId, customerRef));
+            String fakeRoles = m.group("roles");
+            return new CantaraUserAuthentication(ssoId, username, usertokenId, customerRef, () -> String.format("fake-sso-id: %s, fake-customer-ref: %s", ssoId, customerRef), () -> {
+                Map<String, String> roleValueByName = new LinkedHashMap<>();
+                for (String keyValuePair : fakeRoles.split(",")) {
+                    String[] keyAndValue = keyValuePair.split("=");
+                    if (!keyAndValue[0].trim().isEmpty()) {
+                        roleValueByName.put(keyAndValue[0].trim(), keyAndValue[1].trim());
+                    }
+                }
+                return roleValueByName;
+            });
         }
         return fakeUser;
     }
@@ -78,7 +102,10 @@ public class FakeAuthenticationManager implements AuthenticationManager {
         if (userMatcher.matches()) {
             String ssoId = userMatcher.group("ssoid");
             String customerRef = userMatcher.group("customerref");
-            return new CantaraAuthenticationResult(new CantaraUserAuthentication(ssoId, customerRef, () -> String.format("fake-sso-id: %s, fake-customer-ref: %s", ssoId, customerRef)));
+            return new CantaraAuthenticationResult(new CantaraUserAuthentication(ssoId, ssoId, UUID.randomUUID().toString(), customerRef, () -> String.format("fake-sso-id: %s, fake-customer-ref: %s", ssoId, customerRef), () -> {
+                Map<String, String> roles = new LinkedHashMap<>();
+                return roles;
+            }));
         }
         Matcher appMatcher = fakeApplicationTokenPattern.matcher(authorizationHeader);
         if (appMatcher.matches()) {
