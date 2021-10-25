@@ -81,8 +81,8 @@ class FakeAuthenticationManagerTest {
     @Test
     public void thatFakeAuthenticationCanProduceFakeForwardingTokens() {
         AuthenticationManager manager = new FakeAuthenticationManager("fake-user", "fake-username", "fake-usertoken-id", "fake-customer-ref", "fake-application");
-        UserAuthentication userAuthentication = manager.authenticateAsUser("Bearer fake-sso-id: 4ug402jfn, fake-customer-ref: aertoh5893oi4ngf");
-        assertEquals("fake-sso-id: 4ug402jfn, fake-customer-ref: aertoh5893oi4ngf", userAuthentication.forwardingToken());
+        UserAuthentication userAuthentication = manager.authenticateAsUser("Bearer fake-sso-id: 4ug402jfn, fake-usertoken-id: 7be22680-fdaf-4544-938e-33cf1b1bd91f, fake-customer-ref: aertoh5893oi4ngf");
+        assertEquals("Bearer fake-sso-id: 4ug402jfn, fake-username: 4ug402jfn, fake-usertoken-id: 7be22680-fdaf-4544-938e-33cf1b1bd91f, fake-customer-ref: aertoh5893oi4ngf, fake-roles: ", userAuthentication.forwardingToken());
         ApplicationAuthentication appAuthentication = manager.authenticateAsApplication("Bearer fake-application-id: ajihrgui57849hiu");
         assertEquals("fake-application-id: ajihrgui57849hiu", appAuthentication.forwardingToken());
         Authentication authentication1 = manager.authenticate("Bearer fake-sso-id: 389ugieoi, fake-customer-ref: i3ognlf").authentication();
