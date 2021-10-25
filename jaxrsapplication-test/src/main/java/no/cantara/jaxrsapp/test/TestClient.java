@@ -27,7 +27,7 @@ public final class TestClient {
     public static final int CONNECT_TIMEOUT_MS = 3000;
     public static final int SOCKET_TIMEOUT_MS = 10000;
 
-    private Map<String, String> headerByKey = new ConcurrentHashMap<>();
+    private final Map<String, String> headerByKey = new ConcurrentHashMap<>();
     private final String host;
     private final int port;
 
@@ -58,9 +58,9 @@ public final class TestClient {
         return port;
     }
 
-    URI toUri(String path, String query) {
+    URI toUri(String uri) {
         try {
-            return new URI("http", null, host, port, path, query, "");
+            return new URI("http://" + host + ":" + port + uri);
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         }
@@ -113,7 +113,7 @@ public final class TestClient {
 
     public <R> ResponseHelper<R> options(Class<R> responseClazz, String uri, String... headersKeyAndValue) {
         try {
-            Response response = withHeaders(Request.Options(toUri(uri, null))
+            Response response = withHeaders(Request.Options(toUri(uri))
                     .connectTimeout(CONNECT_TIMEOUT_MS)
                     .socketTimeout(SOCKET_TIMEOUT_MS), headersKeyAndValue)
                     .execute();
@@ -130,9 +130,9 @@ public final class TestClient {
 
     public <R> ResponseHelper<R> head(Class<R> responseClazz, String uri) {
         try {
-            Response response = Request.Head(toUri(uri, null))
+            Response response = withHeaders(Request.Head(toUri(uri))
                     .connectTimeout(CONNECT_TIMEOUT_MS)
-                    .socketTimeout(SOCKET_TIMEOUT_MS)
+                    .socketTimeout(SOCKET_TIMEOUT_MS))
                     .execute();
             return new ResponseHelper<>(responseClazz, response);
         } catch (Exception e) {
@@ -143,7 +143,7 @@ public final class TestClient {
 
     public <R> ResponseHelper<R> put(Class<R> responseClazz, String uri, String... headers) {
         try {
-            Response response = withHeaders(Request.Put(toUri(uri, null))
+            Response response = withHeaders(Request.Put(toUri(uri))
                     .connectTimeout(CONNECT_TIMEOUT_MS)
                     .socketTimeout(SOCKET_TIMEOUT_MS), headers)
                     .execute();
@@ -156,7 +156,7 @@ public final class TestClient {
 
     public <T, R> ResponseHelper<R> put(Class<R> responseClazz, String uri, T pojoBody, String... headers) {
         try {
-            Response response = withHeaders(Request.Put(toUri(uri, null))
+            Response response = withHeaders(Request.Put(toUri(uri))
                     .connectTimeout(CONNECT_TIMEOUT_MS)
                     .socketTimeout(SOCKET_TIMEOUT_MS), headers)
                     .body(toJsonEntity(pojoBody))
@@ -174,7 +174,7 @@ public final class TestClient {
 
     public <R> ResponseHelper<R> post(Class<R> responseClazz, String uri, String... headers) {
         try {
-            Response response = withHeaders(Request.Put(toUri(uri, null))
+            Response response = withHeaders(Request.Put(toUri(uri))
                     .connectTimeout(CONNECT_TIMEOUT_MS)
                     .socketTimeout(SOCKET_TIMEOUT_MS), headers)
                     .execute();
@@ -187,7 +187,7 @@ public final class TestClient {
 
     public <T, R> ResponseHelper<R> post(Class<R> responseClazz, String uri, T pojo, String... headers) {
         try {
-            Response response = withHeaders(Request.Post(toUri(uri, null))
+            Response response = withHeaders(Request.Post(toUri(uri))
                     .connectTimeout(CONNECT_TIMEOUT_MS)
                     .socketTimeout(SOCKET_TIMEOUT_MS), headers)
                     .body(toJsonEntity(pojo))
@@ -201,7 +201,7 @@ public final class TestClient {
 
     public <R> ResponseHelper<R> get(Class<R> responseClazz, String uri, String... headersKeyAndValue) {
         try {
-            Response response = withHeaders(Request.Get(toUri(uri, null))
+            Response response = withHeaders(Request.Get(toUri(uri))
                     .connectTimeout(CONNECT_TIMEOUT_MS)
                     .socketTimeout(SOCKET_TIMEOUT_MS), headersKeyAndValue)
                     .execute();
@@ -218,7 +218,7 @@ public final class TestClient {
 
     public <R> ResponseHelper<R> delete(Class<R> responseClazz, String uri, String... headersKeyAndValue) {
         try {
-            Response response = withHeaders(Request.Delete(toUri(uri, null))
+            Response response = withHeaders(Request.Delete(toUri(uri))
                     .connectTimeout(CONNECT_TIMEOUT_MS)
                     .socketTimeout(SOCKET_TIMEOUT_MS), headersKeyAndValue)
                     .execute();
