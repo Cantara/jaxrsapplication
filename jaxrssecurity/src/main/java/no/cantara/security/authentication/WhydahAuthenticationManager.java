@@ -18,14 +18,14 @@ import java.net.URI;
 import java.util.UUID;
 import java.util.function.Supplier;
 
-public class DefaultAuthenticationManager implements AuthenticationManager {
+public class WhydahAuthenticationManager implements AuthenticationManager {
 
-    private static final Logger log = LoggerFactory.getLogger(DefaultAuthenticationManager.class);
+    private static final Logger log = LoggerFactory.getLogger(WhydahAuthenticationManager.class);
 
     private final String oauth2Uri;
     private final WhydahApplicationCredentialStore applicationCredentialStore;
 
-    public DefaultAuthenticationManager(String oauth2Uri, WhydahApplicationCredentialStore applicationCredentialStore) {
+    public WhydahAuthenticationManager(String oauth2Uri, WhydahApplicationCredentialStore applicationCredentialStore) {
         this.oauth2Uri = oauth2Uri;
         this.applicationCredentialStore = applicationCredentialStore;
     }

@@ -4,9 +4,9 @@ import no.cantara.config.ApplicationProperties;
 import no.cantara.security.whydah.WhydahApplicationCredentialStore;
 import no.cantara.security.whydah.WhydahSecurityProperties;
 
-public class DefaultAuthenticationManagerFactory implements AuthenticationManagerFactory {
+public class WhydahAuthenticationManagerFactory implements AuthenticationManagerFactory {
 
-    public DefaultAuthenticationManagerFactory() {
+    public WhydahAuthenticationManagerFactory() {
     }
 
     @Override
@@ -16,7 +16,7 @@ public class DefaultAuthenticationManagerFactory implements AuthenticationManage
 
     @Override
     public String alias() {
-        return "default";
+        return "whydah";
     }
 
     @Override
