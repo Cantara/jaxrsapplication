@@ -254,7 +254,7 @@ public abstract class AbstractJaxRsServletApplication<A extends AbstractJaxRsSer
     }
 
     protected HealthService createHealthService(String groupId, String artifactId) {
-        HealthService healthService = new HealthService(groupId, groupId, 1800, ChronoUnit.MILLIS);
+        HealthService healthService = new HealthService(groupId, artifactId, 1800, ChronoUnit.MILLIS);
         return healthService;
     }
 
