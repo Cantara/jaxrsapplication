@@ -55,11 +55,27 @@ class FakeAuthenticationManagerTest {
             assertEquals("aertoh5893oi4ngf", userAuthentication.customerRef());
         }
         {
-            UserAuthentication userAuthentication = manager.authenticateAsUser("Bearer fake-sso-id: 4ug402jfn, fake-username: hei, fake-usertoken-id: token123, fake-customer-ref: aertoh5893oi4ngf");
+            UserAuthentication userAuthentication = manager.authenticateAsUser("Bearer fake-sso-id: 4ug402jfn, fake-username: hei, fake-usertoken-id: token123, fake-customer-ref: aertoh5893oi4ngf, fake-roles: roleA=123,brol=456");
             assertEquals("4ug402jfn", userAuthentication.ssoId());
             assertEquals("hei", userAuthentication.username());
             assertEquals("token123", userAuthentication.usertokenId());
             assertEquals("aertoh5893oi4ngf", userAuthentication.customerRef());
+            Map<String, String> expectedRoles = new LinkedHashMap<>();
+            expectedRoles.put("roleA", "123");
+            expectedRoles.put("brol", "456");
+            assertEquals(expectedRoles, userAuthentication.roles());
+        }
+        {
+            AuthenticationResult authenticationResult = manager.authenticate("Bearer fake-sso-id: 4ug402jfn, fake-username: hei, fake-usertoken-id: token123, fake-customer-ref: aertoh5893oi4ngf, fake-roles: roleA=123,brol=456");
+            UserAuthentication userAuthentication = authenticationResult.user().orElse(null);
+            assertEquals("4ug402jfn", userAuthentication.ssoId());
+            assertEquals("hei", userAuthentication.username());
+            assertEquals("token123", userAuthentication.usertokenId());
+            assertEquals("aertoh5893oi4ngf", userAuthentication.customerRef());
+            Map<String, String> expectedRoles = new LinkedHashMap<>();
+            expectedRoles.put("roleA", "123");
+            expectedRoles.put("brol", "456");
+            assertEquals(expectedRoles, userAuthentication.roles());
         }
         {
             ApplicationAuthentication appAuthentication = manager.authenticateAsApplication("Bearer fake-application-id: ajihrgui57849hiu");

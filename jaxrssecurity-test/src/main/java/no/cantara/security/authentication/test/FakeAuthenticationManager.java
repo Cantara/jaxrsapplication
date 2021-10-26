@@ -45,33 +45,37 @@ public class FakeAuthenticationManager implements AuthenticationManager {
         }
         Matcher m = fakeUserTokenPattern.matcher(authorizationHeader);
         if (m.matches()) {
-            String ssoId = m.group("ssoid");
-            String username = m.group("username");
-            if (username == null) {
-                username = ssoId;
-            }
-            String theUsername = username;
-            String usertokenId = m.group("usertokenid");
-            if (usertokenId == null) {
-                usertokenId = UUID.randomUUID().toString();
-            }
-            String theUsertokenId = usertokenId;
-            String customerRef = m.group("customerref");
-            String fakeRoles = m.group("roles");
-            return new CantaraUserAuthentication(ssoId, username, usertokenId, customerRef, () -> {
-                return String.format("Bearer fake-sso-id: %s, fake-username: %s, fake-usertoken-id: %s, fake-customer-ref: %s, fake-roles: %s", ssoId, theUsername, theUsertokenId, customerRef, fakeRoles != null ? fakeRoles : "");
-            }, () -> {
-                Map<String, String> roleValueByName = new LinkedHashMap<>();
-                for (String keyValuePair : fakeRoles.split(",")) {
-                    String[] keyAndValue = keyValuePair.split("=");
-                    if (!keyAndValue[0].trim().isEmpty()) {
-                        roleValueByName.put(keyAndValue[0].trim(), keyAndValue[1].trim());
-                    }
-                }
-                return roleValueByName;
-            });
+            return createUserFromMatch(m);
         }
         return fakeUser;
+    }
+
+    private CantaraUserAuthentication createUserFromMatch(Matcher m) {
+        String ssoId = m.group("ssoid");
+        String username = m.group("username");
+        if (username == null) {
+            username = ssoId;
+        }
+        String theUsername = username;
+        String usertokenId = m.group("usertokenid");
+        if (usertokenId == null) {
+            usertokenId = UUID.randomUUID().toString();
+        }
+        String theUsertokenId = usertokenId;
+        String customerRef = m.group("customerref");
+        String fakeRoles = m.group("roles");
+        return new CantaraUserAuthentication(ssoId, username, usertokenId, customerRef, () -> {
+            return String.format("Bearer fake-sso-id: %s, fake-username: %s, fake-usertoken-id: %s, fake-customer-ref: %s, fake-roles: %s", ssoId, theUsername, theUsertokenId, customerRef, fakeRoles != null ? fakeRoles : "");
+        }, () -> {
+            Map<String, String> roleValueByName = new LinkedHashMap<>();
+            for (String keyValuePair : fakeRoles.split(",")) {
+                String[] keyAndValue = keyValuePair.split("=");
+                if (!keyAndValue[0].trim().isEmpty()) {
+                    roleValueByName.put(keyAndValue[0].trim(), keyAndValue[1].trim());
+                }
+            }
+            return roleValueByName;
+        });
     }
 
     @Override
@@ -86,10 +90,14 @@ public class FakeAuthenticationManager implements AuthenticationManager {
         }
         Matcher m = fakeApplicationTokenPattern.matcher(authorizationHeader);
         if (m.matches()) {
-            String applicationid = m.group("applicationid");
-            return new CantaraApplicationAuthentication(applicationid, String.format("fake-application-id: %s", applicationid));
+            return createApplicationFromMatch(m);
         }
         return fakeApplication;
+    }
+
+    private CantaraApplicationAuthentication createApplicationFromMatch(Matcher m) {
+        String applicationid = m.group("applicationid");
+        return new CantaraApplicationAuthentication(applicationid, String.format("fake-application-id: %s", applicationid));
     }
 
     @Override
@@ -104,17 +112,11 @@ public class FakeAuthenticationManager implements AuthenticationManager {
         }
         Matcher userMatcher = fakeUserTokenPattern.matcher(authorizationHeader);
         if (userMatcher.matches()) {
-            String ssoId = userMatcher.group("ssoid");
-            String customerRef = userMatcher.group("customerref");
-            return new CantaraAuthenticationResult(new CantaraUserAuthentication(ssoId, ssoId, UUID.randomUUID().toString(), customerRef, () -> String.format("fake-sso-id: %s, fake-customer-ref: %s", ssoId, customerRef), () -> {
-                Map<String, String> roles = new LinkedHashMap<>();
-                return roles;
-            }));
+            return new CantaraAuthenticationResult(createUserFromMatch(userMatcher));
         }
         Matcher appMatcher = fakeApplicationTokenPattern.matcher(authorizationHeader);
         if (appMatcher.matches()) {
-            String applicationid = appMatcher.group("applicationid");
-            return new CantaraAuthenticationResult(new CantaraApplicationAuthentication(applicationid, String.format("fake-application-id: %s", applicationid)));
+            return new CantaraAuthenticationResult(createApplicationFromMatch(appMatcher));
         }
         return new CantaraAuthenticationResult(fakeApplication);
     }
