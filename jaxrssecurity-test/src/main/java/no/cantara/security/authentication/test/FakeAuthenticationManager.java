@@ -65,7 +65,7 @@ public class FakeAuthenticationManager implements AuthenticationManager {
         String customerRef = m.group("customerref");
         String fakeRoles = m.group("roles");
         return new CantaraUserAuthentication(ssoId, username, usertokenId, customerRef, () -> {
-            return String.format("Bearer fake-sso-id: %s, fake-username: %s, fake-usertoken-id: %s, fake-customer-ref: %s, fake-roles: %s", ssoId, theUsername, theUsertokenId, customerRef, fakeRoles != null ? fakeRoles : "");
+            return String.format("fake-sso-id: %s, fake-username: %s, fake-usertoken-id: %s, fake-customer-ref: %s, fake-roles: %s", ssoId, theUsername, theUsertokenId, customerRef, fakeRoles != null ? fakeRoles : "");
         }, () -> {
             Map<String, String> roleValueByName = new LinkedHashMap<>();
             for (String keyValuePair : fakeRoles.split(",")) {
