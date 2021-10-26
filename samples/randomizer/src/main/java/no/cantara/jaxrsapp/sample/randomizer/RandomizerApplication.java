@@ -44,7 +44,7 @@ public class RandomizerApplication extends AbstractJaxRsServletApplication<Rando
         pw.printf("AUDIT: I am the Randomizer application!%n").flush();
         init(Random.class, this::createRandom);
         RandomizerResource randomizerResource = initAndRegisterJaxRsWsComponent(RandomizerResource.class, this::createRandomizerResource);
-        initHealth(new HealthProbe("randomizer.request.count", randomizerResource::getRequestCount));
+        initHealth("no.cantara.jaxrsapp", "randomizer", new HealthProbe("randomizer.request.count", randomizerResource::getRequestCount));
     }
 
     private JaxRsOpenApiResource createOpenApiResource() {

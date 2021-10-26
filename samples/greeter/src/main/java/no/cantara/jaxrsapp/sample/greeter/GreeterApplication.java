@@ -47,7 +47,7 @@ public class GreeterApplication extends AbstractJaxRsServletApplication<GreeterA
         init(RandomizerClient.class, this::createHttpRandomizer);
         GreetingService greetingService = initAndRegisterJaxRsWsComponent(GreetingService.class, this::createGreetingService);
         GreetingResource greetingResource = initAndRegisterJaxRsWsComponent(GreetingResource.class, this::createGreetingResource);
-        initHealth(new HealthProbe("greeting.request.count", greetingResource::getRequestCount));
+        initHealth("no.cantara.jaxrsapp", "greeter", new HealthProbe("greeting.request.count", greetingResource::getRequestCount));
     }
 
     private JaxRsOpenApiResource createOpenApiResource() {

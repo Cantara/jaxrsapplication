@@ -245,16 +245,16 @@ public abstract class AbstractJaxRsServletApplication<A extends AbstractJaxRsSer
         }
     }
 
-    protected void initHealth(HealthProbe... healthProbes) {
-        HealthService healthService = init(HealthService.class, this::createHealthService);
+    protected void initHealth(String groupId, String artifactId, HealthProbe... healthProbes) {
+        HealthService healthService = init(HealthService.class, () -> createHealthService(groupId, artifactId));
         for (HealthProbe healthProbe : healthProbes) {
             healthService.registerHealthProbe(healthProbe.getKey(), healthProbe.getProbe());
         }
         HealthResource healthResource = initAndRegisterJaxRsWsComponent(HealthResource.class, this::createHealthResource);
     }
 
-    protected HealthService createHealthService() {
-        HealthService healthService = new HealthService(1800, ChronoUnit.MILLIS);
+    protected HealthService createHealthService(String groupId, String artifactId) {
+        HealthService healthService = new HealthService(groupId, groupId, 1800, ChronoUnit.MILLIS);
         return healthService;
     }
 

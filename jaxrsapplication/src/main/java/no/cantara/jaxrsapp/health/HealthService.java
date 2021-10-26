@@ -46,11 +46,11 @@ public class HealthService implements Runnable {
      */
     ObjectNode currentHealth;
 
-    public HealthService(long updateInterval, TemporalUnit updateIntervalUnit) {
+    public HealthService(String groupId, String artifactId, long updateInterval, TemporalUnit updateIntervalUnit) {
         this.updateInterval = updateInterval;
         this.updateIntervalUnit = updateIntervalUnit;
         this.currentHealthSerialized = new AtomicReference<>("{}");
-        this.version = readVersion("net.whydah.sso", "Entra-SSOLoginWebApp");
+        this.version = readVersion(groupId, artifactId);
         this.healthUpdateThread = new Thread(this, "health-updater-" + serviceSequence.incrementAndGet());
         this.healthUpdateThread.start();
     }
