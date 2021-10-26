@@ -97,12 +97,12 @@ class FakeAuthenticationManagerTest {
     @Test
     public void thatFakeAuthenticationCanProduceFakeForwardingTokens() {
         AuthenticationManager manager = new FakeAuthenticationManager("fake-user", "fake-username", "fake-usertoken-id", "fake-customer-ref", "fake-application");
-        UserAuthentication userAuthentication = manager.authenticateAsUser("Bearer fake-sso-id: 4ug402jfn, fake-usertoken-id: 7be22680-fdaf-4544-938e-33cf1b1bd91f, fake-customer-ref: aertoh5893oi4ngf");
-        assertEquals("Bearer fake-sso-id: 4ug402jfn, fake-username: 4ug402jfn, fake-usertoken-id: 7be22680-fdaf-4544-938e-33cf1b1bd91f, fake-customer-ref: aertoh5893oi4ngf, fake-roles: ", userAuthentication.forwardingToken());
+        UserAuthentication userAuthentication = manager.authenticateAsUser("Bearer fake-sso-id: 4ug402jfn, fake-usertoken-id: 7be22680-fdaf-4544-938e-33cf1b1bd91f, fake-customer-ref: aertoh5893oi4ngf, fake-roles: AB=C4");
+        assertEquals("Bearer fake-sso-id: 4ug402jfn, fake-username: 4ug402jfn, fake-usertoken-id: 7be22680-fdaf-4544-938e-33cf1b1bd91f, fake-customer-ref: aertoh5893oi4ngf, fake-roles: AB=C4", userAuthentication.forwardingToken());
         ApplicationAuthentication appAuthentication = manager.authenticateAsApplication("Bearer fake-application-id: ajihrgui57849hiu");
         assertEquals("fake-application-id: ajihrgui57849hiu", appAuthentication.forwardingToken());
-        Authentication authentication1 = manager.authenticate("Bearer fake-sso-id: 389ugieoi, fake-customer-ref: i3ognlf").authentication();
-        assertEquals("fake-sso-id: 389ugieoi, fake-customer-ref: i3ognlf", ((UserAuthentication) authentication1).forwardingToken());
+        Authentication authentication1 = manager.authenticate("Bearer fake-sso-id: 389ugieoi, fake-usertoken-id: 8f09800a-2722-41ab-9ed2-ce4c202e829f, fake-customer-ref: i3ognlf").authentication();
+        assertEquals("Bearer fake-sso-id: 389ugieoi, fake-username: 389ugieoi, fake-usertoken-id: 8f09800a-2722-41ab-9ed2-ce4c202e829f, fake-customer-ref: i3ognlf, fake-roles: ", ((UserAuthentication) authentication1).forwardingToken());
         Authentication authentication2 = manager.authenticate("Bearer fake-application-id: h4578guienakl").authentication();
         assertEquals("fake-application-id: h4578guienakl", ((ApplicationAuthentication) authentication2).forwardingToken());
     }
