@@ -1,29 +1,22 @@
 package no.cantara.jaxrsapp;
 
 import com.codahale.metrics.Counter;
-import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
+import com.codahale.metrics.health.HealthCheck;
 import com.codahale.metrics.health.HealthCheckRegistry;
-import com.codahale.metrics.jersey2.MetricsFeature;
 import com.codahale.metrics.jetty9.InstrumentedConnectionFactory;
 import com.codahale.metrics.jetty9.InstrumentedHttpChannelListener;
 import com.codahale.metrics.jetty9.InstrumentedQueuedThreadPool;
-import com.codahale.metrics.jvm.BufferPoolMetricSet;
-import com.codahale.metrics.jvm.ClassLoadingGaugeSet;
-import com.codahale.metrics.jvm.GarbageCollectorMetricSet;
-import com.codahale.metrics.jvm.JvmAttributeGaugeSet;
-import com.codahale.metrics.jvm.MemoryUsageGaugeSet;
-import com.codahale.metrics.jvm.ThreadStatesGaugeSet;
 import com.codahale.metrics.servlets.AdminServlet;
 import com.codahale.metrics.servlets.HealthCheckServlet;
 import com.codahale.metrics.servlets.MetricsServlet;
 import no.cantara.config.ApplicationProperties;
 import no.cantara.config.ProviderLoader;
-import no.cantara.jaxrsapp.health.HealthProbe;
 import no.cantara.jaxrsapp.health.HealthResource;
 import no.cantara.jaxrsapp.health.HealthService;
-import no.cantara.jaxrsapp.metrics.FileDescriptorMetricSet;
+import no.cantara.jaxrsapp.metrics.JaxRsMetrics;
+import no.cantara.jaxrsapp.security.CORSServletFilter;
 import no.cantara.jaxrsapp.security.SecurityFilter;
 import no.cantara.security.authentication.AuthenticationManager;
 import no.cantara.security.authentication.AuthenticationManagerFactory;
@@ -52,7 +45,6 @@ import javax.ws.rs.container.ContainerRequestContext;
 import javax.ws.rs.core.Application;
 import javax.ws.rs.core.Request;
 import java.io.IOException;
-import java.lang.management.ManagementFactory;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.time.temporal.ChronoUnit;
@@ -73,6 +65,7 @@ public abstract class AbstractJaxRsServletApplication<A extends AbstractJaxRsSer
     private static final Logger log = LoggerFactory.getLogger(AbstractJaxRsServletApplication.class);
 
     protected final String applicationAlias;
+    protected final String version;
     protected final ApplicationProperties config;
     protected final ResourceConfig resourceConfig; // jakarta.ws.rs.core.Application
     protected final AtomicReference<Server> jettyServerRef = new AtomicReference<>();
@@ -82,8 +75,10 @@ public abstract class AbstractJaxRsServletApplication<A extends AbstractJaxRsSer
     protected final Map<String, Supplier<Object>> initOverrides = new ConcurrentHashMap<>();
     protected final AtomicBoolean initialized = new AtomicBoolean(false);
 
-    protected AbstractJaxRsServletApplication(String applicationAlias, ApplicationProperties config) {
+    protected AbstractJaxRsServletApplication(String applicationAlias, String version, ApplicationProperties config) {
         this.applicationAlias = applicationAlias;
+        this.version = version;
+        put("version", version);
         this.config = config;
         put(ApplicationProperties.class, config);
         resourceConfig = new ResourceConfig();
@@ -144,31 +139,22 @@ public abstract class AbstractJaxRsServletApplication<A extends AbstractJaxRsSer
         return instance;
     }
 
-    protected <T extends Filter> T initAndAddServletFilter(Class<T> clazz, Supplier<T> filterSupplier, String pathSpec, EnumSet<DispatcherType> dispatches) {
-        return initAndAddServletFilter(clazz.getName(), filterSupplier, pathSpec, dispatches);
-    }
-
-    protected <T extends Filter> T initAndAddServletFilter(String key, Supplier<T> filterSupplier, String pathSpec, EnumSet<DispatcherType> dispatches) {
+    @Override
+    public <T extends Filter> T initAndAddServletFilter(String key, Supplier<T> filterSupplier, String pathSpec, EnumSet<DispatcherType> dispatches) {
         T instance = init(key, filterSupplier);
         filterSpecs.add(new FilterSpec(key, instance, pathSpec, dispatches));
         return instance;
     }
 
-    protected <T> T initAndRegisterJaxRsWsComponent(Class<T> clazz, Supplier<T> init) {
-        return initAndRegisterJaxRsWsComponent(clazz.getName(), init);
-    }
-
-    protected <T> T initAndRegisterJaxRsWsComponent(String key, Supplier<T> init) {
+    @Override
+    public <T> T initAndRegisterJaxRsWsComponent(String key, Supplier<T> init) {
         T instance = init(key, init);
         resourceConfig.register(instance);
         return instance;
     }
 
-    protected <T> T init(Class<T> clazz, Supplier<T> init) {
-        return init(clazz.getName(), init);
-    }
-
-    protected <T> T init(String key, Supplier<T> init) {
+    @Override
+    public <T> T init(String key, Supplier<T> init) {
         Supplier<T> initOverride = (Supplier<T>) initOverrides.get(key);
         T instance;
         if (initOverride != null) {
@@ -299,7 +285,7 @@ public abstract class AbstractJaxRsServletApplication<A extends AbstractJaxRsSer
         return servletContextHandler;
     }
 
-    private String normalizeContextPath(String contextPath) {
+    protected String normalizeContextPath(String contextPath) {
         Objects.requireNonNull(contextPath);
         String c = contextPath;
         // trim leading slashes
@@ -337,62 +323,27 @@ public abstract class AbstractJaxRsServletApplication<A extends AbstractJaxRsSer
         }
     }
 
-    protected MetricRegistry initMetrics() {
-        MetricRegistry appMetricRegistry = init(MetricRegistry.class, MetricRegistry::new);
-        appMetricRegistry.register("name", (Gauge<String>) this::alias);
-        MetricRegistry baseMetricRegistry = init("metrics.base", MetricRegistry::new);
-        baseMetricRegistry.register("app", appMetricRegistry);
-        return appMetricRegistry;
-    }
-
-    protected void initJerseyMetrics() {
-        MetricRegistry metricRegistry = get("metrics.base");
-        MetricRegistry jerseyMetricRegistry = init("metrics.jersey", MetricRegistry::new);
-        metricRegistry.register("jersey", jerseyMetricRegistry);
-        initAndRegisterJaxRsWsComponent(MetricsFeature.class, () -> new MetricsFeature(jerseyMetricRegistry));
-    }
-
-    protected void initJettyMetrics() {
-        MetricRegistry metricRegistry = get("metrics.base");
-        MetricRegistry jettyMetricRegistry = init("metrics.jetty", MetricRegistry::new);
-        metricRegistry.register("jetty", jettyMetricRegistry);
-    }
-
-    protected void initJvmMetrics() {
-        MetricRegistry metricRegistry = get("metrics.base");
-        MetricRegistry jvmMetricRegistry = init("metrics.jvm", MetricRegistry::new);
-        jvmMetricRegistry.registerAll("memory", new MemoryUsageGaugeSet());
-        jvmMetricRegistry.registerAll("threads", new ThreadStatesGaugeSet());
-        // jvmMetricRegistry.registerAll("threads", new CachedThreadStatesGaugeSet(5, TimeUnit.SECONDS));
-        jvmMetricRegistry.registerAll("runtime", new JvmAttributeGaugeSet());
-        jvmMetricRegistry.registerAll("gc", new GarbageCollectorMetricSet());
-        jvmMetricRegistry.register("fd", new FileDescriptorMetricSet());
-        jvmMetricRegistry.register("classes", new ClassLoadingGaugeSet());
-        jvmMetricRegistry.registerAll("buffers", new BufferPoolMetricSet(ManagementFactory.getPlatformMBeanServer()));
-        metricRegistry.register("jvm", jvmMetricRegistry);
-    }
-
-    protected void initHealth(String groupId, String artifactId, HealthProbe... healthProbes) {
-        if (getOrNull("version") == null) {
-            initVersion(groupId, artifactId);
-        }
+    protected void initBuiltinDefaults() {
+        JaxRsMetrics jaxRsMetrics = new JaxRsMetrics(this);
+        jaxRsMetrics.initAllMetrics();
         initVisualeHealth();
+        initAdminServlet();
+        initSecurity();
+        initAndAddServletFilter(CORSServletFilter.class, CORSServletFilter.builder()::build, "/*", EnumSet.allOf(DispatcherType.class));
         HealthService healthService = get(HealthService.class);
-        for (HealthProbe healthProbe : healthProbes) {
-            healthService.registerHealthProbe(healthProbe.getKey(), healthProbe.getProbe());
-        }
-    }
-
-    protected void initVersion(String groupId, String artifactId) {
-        init("version", () -> readMetaInfMavenPomVersion(groupId, artifactId));
-    }
-
-    protected void initVersion(String version) {
-        init("version", () -> version);
+        healthService.registerHealthCheck("webserver.running", new HealthCheck() {
+            @Override
+            protected Result check() {
+                if (jettyServerRef.get().isRunning()) {
+                    return Result.healthy();
+                } else {
+                    return Result.unhealthy("web-server is not running");
+                }
+            }
+        });
     }
 
     protected void initVisualeHealth() {
-        String version = getOrDefault("version", "UNKNOWN");
         init(HealthCheckRegistry.class, this::createHealthRegistry);
         init(HealthService.class, () -> createHealthService(version));
         initAndRegisterJaxRsWsComponent(HealthResource.class, this::createHealthResource);
@@ -459,9 +410,9 @@ public abstract class AbstractJaxRsServletApplication<A extends AbstractJaxRsSer
         return resourceMethod;
     }
 
-    private String readMetaInfMavenPomVersion(String groupId, String artifactId) {
+    public static String readMetaInfMavenPomVersion(String groupId, String artifactId) {
         String resourcePath = String.format("/META-INF/maven/%s/%s/pom.properties", groupId, artifactId);
-        URL mavenVersionResource = getClass().getResource(resourcePath);
+        URL mavenVersionResource = AbstractJaxRsServletApplication.class.getResource(resourcePath);
         if (mavenVersionResource != null) {
             try {
                 Properties mavenProperties = new Properties();

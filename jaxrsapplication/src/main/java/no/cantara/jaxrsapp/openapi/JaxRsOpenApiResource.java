@@ -1,4 +1,4 @@
-package no.cantara.jaxrsapp.sample.randomizer;
+package no.cantara.jaxrsapp.openapi;
 
 import io.swagger.v3.jaxrs2.integration.resources.BaseOpenApiResource;
 import io.swagger.v3.oas.annotations.Operation;
@@ -26,9 +26,7 @@ public class JaxRsOpenApiResource extends BaseOpenApiResource {
 
     @GET
     @Produces({"application/json", "application/yaml"})
-    @Operation(
-            hidden = true
-    )
+    @Operation(hidden = true)
     @SecurityOverride
     public Response getOpenApi(@Context HttpHeaders headers, @Context UriInfo uriInfo, @PathParam("type") String type) throws Exception {
         return super.getOpenApi(headers, this.config, this.app, uriInfo, type);

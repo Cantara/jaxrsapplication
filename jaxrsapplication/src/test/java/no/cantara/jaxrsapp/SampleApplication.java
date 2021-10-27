@@ -3,11 +3,12 @@ package no.cantara.jaxrsapp;
 import no.cantara.config.ApplicationProperties;
 
 public class SampleApplication extends AbstractJaxRsServletApplication<SampleApplication> {
-    public SampleApplication(ApplicationProperties config) {
-        super("test-application", config);
+    public SampleApplication(String alias, ApplicationProperties config) {
+        super(alias, "dev-version-1.2.3", config);
     }
 
     @Override
-    public void doInit() {
+    protected void doInit() {
+        initBuiltinDefaults();
     }
 }

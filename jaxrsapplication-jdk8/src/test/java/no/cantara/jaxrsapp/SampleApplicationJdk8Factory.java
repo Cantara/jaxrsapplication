@@ -15,6 +15,6 @@ public class SampleApplicationJdk8Factory implements JaxRsServletApplicationFact
 
     @Override
     public SampleApplicationJdk8 create(ApplicationProperties applicationProperties) {
-        return new SampleApplicationJdk8(applicationProperties);
+        return new SampleApplicationJdk8(alias(), applicationProperties);
     }
 }

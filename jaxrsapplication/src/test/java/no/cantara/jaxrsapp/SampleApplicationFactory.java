@@ -15,6 +15,6 @@ public class SampleApplicationFactory implements JaxRsServletApplicationFactory<
 
     @Override
     public SampleApplication create(ApplicationProperties applicationProperties) {
-        return new SampleApplication(applicationProperties);
+        return new SampleApplication(alias(), applicationProperties);
     }
 }
