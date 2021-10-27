@@ -15,7 +15,7 @@ import no.cantara.jaxrsapp.security.SecureAction;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-@Path("/")
+@Path("/greet")
 public class GreetingResource {
 
     private final AtomicLong requestCount = new AtomicLong();

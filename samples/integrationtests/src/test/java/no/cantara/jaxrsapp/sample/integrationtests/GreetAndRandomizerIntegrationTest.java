@@ -99,8 +99,8 @@ public class GreetAndRandomizerIntegrationTest implements BeforeInitLifecycleLis
 
     @Test
     public void thatHealthOfGreetingAndRandomizerBothWorks() {
-        JsonNode greeterHealth = greeterClient.get(JsonNode.class, "/greet/health").expect200Ok().body();
-        log.info("/greet/health Response: {}", greeterHealth);
+        JsonNode greeterHealth = greeterClient.get(JsonNode.class, "/health").expect200Ok().body();
+        log.info("/health Response: {}", greeterHealth);
         JsonNode randomizerHealth = randomizerClient.get(JsonNode.class, "/randomizer/health").expect200Ok().body();
         log.info("/randomizer/health Response: {}", randomizerHealth);
     }
@@ -128,8 +128,8 @@ public class GreetAndRandomizerIntegrationTest implements BeforeInitLifecycleLis
 
     @Test
     public void thatGreetingOpenApiWorks() {
-        String openApiYaml = greeterClient.get(String.class, "/greet/openapi.yaml").expect200Ok().body();
-        log.info("/greet/openapi.yaml:\n{}", openApiYaml);
+        String openApiYaml = greeterClient.get(String.class, "/openapi.yaml").expect200Ok().body();
+        log.info("/openapi.yaml:\n{}", openApiYaml);
     }
 
     @Test

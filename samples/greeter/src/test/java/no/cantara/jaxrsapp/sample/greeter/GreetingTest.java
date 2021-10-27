@@ -39,14 +39,14 @@ public class GreetingTest implements BeforeInitLifecycleListener {
                         HttpHeaders.AUTHORIZATION, "Bearer fake-application-id: junit-viewer")
                 .expect200Ok().body();
         log.info("/greet/John Response: {}", greeting);
-        JsonNode body = testClient.get(JsonNode.class, "/greet/health").expect200Ok().body();
-        log.info("/greet/health Response: {}", body.toPrettyString());
+        JsonNode body = testClient.get(JsonNode.class, "/health").expect200Ok().body();
+        log.info("/health Response: {}", body.toPrettyString());
     }
 
     @Test
     public void thatOpenApiWorks() {
-        String openApiYaml = testClient.get(String.class, "/greet/openapi.yaml").expect200Ok().body();
-        log.info("/greet/openapi.yaml:\n{}", openApiYaml);
+        String openApiYaml = testClient.get(String.class, "/openapi.yaml").expect200Ok().body();
+        log.info("/openapi.yaml:\n{}", openApiYaml);
     }
 
     @Test
@@ -67,7 +67,7 @@ public class GreetingTest implements BeforeInitLifecycleListener {
                 testClient.get(String.class, "/greet/John", HttpHeaders.AUTHORIZATION, "Bearer fake-application-id: junit-viewer").expect200Ok().body();
             } else {
                 // remainder == 3
-                testClient.get(String.class, "/greet/openapi.yaml").expect200Ok().body();
+                testClient.get(String.class, "/openapi.yaml").expect200Ok().body();
             }
         }
         String body = testClient.get(String.class, "/admin/metrics/jersey").expect200Ok().body();
