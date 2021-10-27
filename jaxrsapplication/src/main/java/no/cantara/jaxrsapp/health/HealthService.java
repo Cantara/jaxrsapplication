@@ -1,20 +1,21 @@
 package no.cantara.jaxrsapp.health;
 
+import com.codahale.metrics.health.HealthCheck;
+import com.codahale.metrics.health.HealthCheckRegistry;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.net.URL;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.TemporalUnit;
 import java.util.List;
-import java.util.Properties;
+import java.util.Map;
+import java.util.SortedMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -39,6 +40,7 @@ public class HealthService implements Runnable {
     private final TemporalUnit updateIntervalUnit;
     private final String version;
     private final AtomicLong healthComputeTimeMs = new AtomicLong(-1);
+    private final HealthCheckRegistry healthCheckRegistry;
     private final List<HealthProbe> healthProbes = new CopyOnWriteArrayList<>();
 
     /*
@@ -46,11 +48,12 @@ public class HealthService implements Runnable {
      */
     ObjectNode currentHealth;
 
-    public HealthService(String groupId, String artifactId, long updateInterval, TemporalUnit updateIntervalUnit) {
+    public HealthService(String version, HealthCheckRegistry healthCheckRegistry, long updateInterval, TemporalUnit updateIntervalUnit) {
         this.updateInterval = updateInterval;
         this.updateIntervalUnit = updateIntervalUnit;
         this.currentHealthSerialized = new AtomicReference<>("{}");
-        this.version = readVersion(groupId, artifactId);
+        this.version = version;
+        this.healthCheckRegistry = healthCheckRegistry;
         this.healthUpdateThread = new Thread(this, "health-updater-" + serviceSequence.incrementAndGet());
         this.healthUpdateThread.start();
     }
@@ -121,6 +124,11 @@ public class HealthService implements Runnable {
         }
     }
 
+    public HealthService registerHealthCheck(String key, HealthCheck healthCheck) {
+        healthCheckRegistry.register(key, healthCheck);
+        return this;
+    }
+
     public HealthService registerHealthProbe(String key, Supplier<Object> probe) {
         healthProbes.add(new HealthProbe(key, probe));
         return this;
@@ -129,7 +137,17 @@ public class HealthService implements Runnable {
     private boolean updateHealth(ObjectNode health) {
         long start = System.currentTimeMillis();
         boolean changed = false;
-        changed |= updateField(health, "Status", () -> "OK");
+        boolean status = true; // healthy
+        SortedMap<String, HealthCheck.Result> healthCheckResultByKey = healthCheckRegistry.runHealthChecks();
+        for (Map.Entry<String, HealthCheck.Result> entry : healthCheckResultByKey.entrySet()) {
+            String key = entry.getKey();
+            HealthCheck.Result result = entry.getValue();
+            boolean healthy = result.isHealthy();
+            status &= healthy; // all health-checks must be healthy in order for status to be true
+            changed |= updateField(health, key, () -> healthy ? "UP" : "DOWN");
+        }
+        boolean effectiveStatus = status;
+        changed |= updateField(health, "Status", () -> effectiveStatus ? "UP" : "DOWN");
         for (HealthProbe healthProbe : healthProbes) {
             changed |= updateField(health, healthProbe.key, healthProbe.probe);
         }
@@ -189,18 +207,4 @@ public class HealthService implements Runnable {
         return true;
     }
 
-    private String readVersion(String groupId, String artifactId) {
-        String resourcePath = String.format("/META-INF/maven/%s/%s/pom.properties", groupId, artifactId);
-        URL mavenVersionResource = HealthService.class.getResource(resourcePath);
-        if (mavenVersionResource != null) {
-            try {
-                Properties mavenProperties = new Properties();
-                mavenProperties.load(mavenVersionResource.openStream());
-                return mavenProperties.getProperty("version", "missing version info in " + resourcePath);
-            } catch (IOException e) {
-                log.warn("Problem reading version resource from classpath: ", e);
-            }
-        }
-        return "unknown";
-    }
 }

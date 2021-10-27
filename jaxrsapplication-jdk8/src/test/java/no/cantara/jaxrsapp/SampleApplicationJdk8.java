@@ -9,5 +9,13 @@ public class SampleApplicationJdk8 extends AbstractJaxRsServletApplication<Sampl
 
     @Override
     protected void doInit() {
+        initMetrics();
+        initJerseyMetrics();
+        initJettyMetrics();
+        initJvmMetrics();
+        initSecurity();
+        initAdminServlet();
+        initVersion("test-version");
+        initVisualeHealth();
     }
 }

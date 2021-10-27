@@ -37,6 +37,10 @@ public class RandomizerApplication extends AbstractJaxRsServletApplication<Rando
 
     @Override
     public void doInit() {
+        initMetrics();
+        initJerseyMetrics();
+        initJettyMetrics();
+        initJvmMetrics();
         initSecurity();
         initAndAddServletFilter(CORSServletFilter.class, CORSServletFilter::new, "/*", EnumSet.allOf(DispatcherType.class));
         initAndRegisterJaxRsWsComponent(JaxRsOpenApiResource.class.getName(), this::createOpenApiResource);

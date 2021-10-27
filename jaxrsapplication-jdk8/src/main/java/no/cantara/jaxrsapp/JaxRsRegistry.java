@@ -18,6 +18,10 @@ public interface JaxRsRegistry {
 
     <T> T getOrNull(String key);
 
+    default <T> T getOrNull(Class<T> clazz) {
+        return getOrNull(clazz.getName());
+    }
+
     default <T> T getOrDefault(String key, T defaultValue) {
         T instance = getOrNull(key);
         if (instance == null) {

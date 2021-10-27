@@ -1,5 +1,7 @@
 package no.cantara.jaxrsapp.sample.greeter;
 
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.health.HealthCheck;
 import io.swagger.v3.oas.integration.SwaggerConfiguration;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
@@ -7,7 +9,7 @@ import io.swagger.v3.oas.models.servers.Server;
 import jakarta.servlet.DispatcherType;
 import no.cantara.config.ApplicationProperties;
 import no.cantara.jaxrsapp.AbstractJaxRsServletApplication;
-import no.cantara.jaxrsapp.health.HealthProbe;
+import no.cantara.jaxrsapp.health.HealthService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,13 +43,31 @@ public class GreeterApplication extends AbstractJaxRsServletApplication<GreeterA
         initSecurity();
         initAndAddServletFilter(CORSServletFilter.class, CORSServletFilter::new, "/*", EnumSet.allOf(DispatcherType.class));
         initAndRegisterJaxRsWsComponent(JaxRsOpenApiResource.class.getName(), this::createOpenApiResource);
+        initMetrics();
+        initJerseyMetrics();
+        initJettyMetrics();
+        initJvmMetrics();
         PrintWriter pw = init(PrintWriter.class, this::createAuditTo);
         pw.printf("AUDIT: I am the Greeting application!%n").flush();
         init(GreetingCandidateRepository.class, this::createGreetingCandidateRepository);
         init(RandomizerClient.class, this::createHttpRandomizer);
-        GreetingService greetingService = initAndRegisterJaxRsWsComponent(GreetingService.class, this::createGreetingService);
+        GreetingService greetingService = init(GreetingService.class, this::createGreetingService);
         GreetingResource greetingResource = initAndRegisterJaxRsWsComponent(GreetingResource.class, this::createGreetingResource);
-        initHealth("no.cantara.jaxrsapp", "greeter", new HealthProbe("greeting.request.count", greetingResource::getRequestCount));
+        initVersion("no.cantara.jaxrsapp", "greeter");
+        initVisualeHealth();
+        HealthService healthService = get(HealthService.class);
+        healthService.registerHealthProbe("greeting.request.count", greetingResource::getRequestCount);
+        healthService.registerHealthCheck("alive", new HealthCheck() {
+            @Override
+            protected Result check() {
+                if (jettyServerRef.get().isRunning()) {
+                    return Result.healthy();
+                } else {
+                    return Result.unhealthy("web-server is not running");
+                }
+            }
+        });
+        initAdminServlet();
     }
 
     private JaxRsOpenApiResource createOpenApiResource() {
@@ -96,7 +116,8 @@ public class GreeterApplication extends AbstractJaxRsServletApplication<GreeterA
     private GreetingService createGreetingService() {
         RandomizerClient randomizerClient = get(RandomizerClient.class);
         GreetingCandidateRepository greetingCandidateRepository = get(GreetingCandidateRepository.class);
-        return new GreetingService(greetingCandidateRepository, randomizerClient);
+        MetricRegistry metricRegistry = get(MetricRegistry.class);
+        return new GreetingService(metricRegistry, greetingCandidateRepository, randomizerClient);
     }
 
     private GreetingResource createGreetingResource() {

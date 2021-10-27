@@ -9,6 +9,7 @@ import org.apache.http.util.EntityUtils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -52,6 +53,10 @@ public class ResponseHelper<T> {
                     ByteArrayOutputStream baos = new ByteArrayOutputStream(1024);
                     httpResponse.getEntity().writeTo(baos);
                     return (T) baos.toByteArray();
+                } else if (ByteBuffer.class.equals(entityClass)) {
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream(1024);
+                    httpResponse.getEntity().writeTo(baos);
+                    return (T) ByteBuffer.wrap(baos.toByteArray());
                 } else {
                     body = mapper.readValue(httpResponse.getEntity().getContent(), entityClass);
                 }

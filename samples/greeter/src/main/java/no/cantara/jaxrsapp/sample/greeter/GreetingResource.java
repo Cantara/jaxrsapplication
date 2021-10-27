@@ -1,6 +1,7 @@
 package no.cantara.jaxrsapp.sample.greeter;
 
 
+import com.codahale.metrics.annotation.Timed;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
@@ -32,6 +33,7 @@ public class GreetingResource {
     @Path("/{name}")
     @Produces(MediaType.APPLICATION_JSON)
     @SecureAction("greet")
+    @Timed
     public Greeting greet(@PathParam("name") String name, @QueryParam("greeting") String greetingParam, @Context SecurityContext securityContext) {
         requestCount.incrementAndGet();
         if (greetingParam != null) {
