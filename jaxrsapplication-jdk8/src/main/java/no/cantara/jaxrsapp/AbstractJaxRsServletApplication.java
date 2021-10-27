@@ -311,7 +311,9 @@ public abstract class AbstractJaxRsServletApplication<A extends AbstractJaxRsSer
             c = c.substring(0, c.length() - 1);
         }
         // add single leading slash
-        c = "/" + c;
+        if (c.length() > 0) {
+            c = "/" + c;
+        }
         return c;
     }
 
