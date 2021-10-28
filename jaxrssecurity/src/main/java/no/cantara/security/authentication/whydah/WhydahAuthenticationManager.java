@@ -36,17 +36,17 @@ public class WhydahAuthenticationManager implements AuthenticationManager {
 
     private final Set<String> roleNamesFilter;
     private final String oauth2Uri;
-    private final WhydahApplicationCredentialStore applicationCredentialStore;
+    private final JaxRsWhydahSession applicationTokenSession;
     private final WhydahService whydahService;
 
-    public WhydahAuthenticationManager(Collection<String> roleNamesFilter, String oauth2Uri, WhydahApplicationCredentialStore applicationCredentialStore) {
+    public WhydahAuthenticationManager(Collection<String> roleNamesFilter, String oauth2Uri, JaxRsWhydahSession applicationTokenSession) {
         this.roleNamesFilter = roleNamesFilter.stream()
                 .map(String::trim)
                 .map(String::toLowerCase)
                 .collect(Collectors.toSet());
         this.oauth2Uri = oauth2Uri;
-        this.applicationCredentialStore = applicationCredentialStore;
-        this.whydahService = new WhydahService(applicationCredentialStore.getApplicationSession());
+        this.applicationTokenSession = applicationTokenSession;
+        this.whydahService = new WhydahService(applicationTokenSession.getApplicationSession());
     }
 
     public UserAuthentication authenticateAsUser(String authorizationHeader) throws UnauthorizedException {
@@ -62,7 +62,7 @@ public class WhydahAuthenticationManager implements AuthenticationManager {
             String token = authorization.substring("Bearer ".length());
 
             final String applicationId = new CommandGetApplicationIdFromApplicationTokenId(
-                    URI.create(applicationCredentialStore.getSecurityTokenServiceUri()),
+                    URI.create(applicationTokenSession.getSecurityTokenServiceUri()),
                     token).execute();
 
             log.trace("Lookup application by applicationTokenId {}. Id found {}", token, applicationId);
@@ -142,9 +142,9 @@ public class WhydahAuthenticationManager implements AuthenticationManager {
                 log.debug("Resolving Whydah-userticket");
                 String userticket = token;
 
-                final String userTokenFromUserTokenId = new CommandGetUserTokenByUserTicket(URI.create(applicationCredentialStore.getSecurityTokenServiceUri()),
-                        applicationCredentialStore.getApplicationTokenId(),
-                        ApplicationCredentialMapper.toXML(applicationCredentialStore.getApplicationCredential()), userticket).execute();
+                final String userTokenFromUserTokenId = new CommandGetUserTokenByUserTicket(URI.create(applicationTokenSession.getSecurityTokenServiceUri()),
+                        applicationTokenSession.getApplicationToken(),
+                        ApplicationCredentialMapper.toXML(applicationTokenSession.getApplicationCredential()), userticket).execute();
                 if (userTokenFromUserTokenId != null && UserTokenMapper.validateUserTokenMD5Signature(userTokenFromUserTokenId)) {
                     final UserToken userToken = UserTokenMapper.fromUserTokenXml(userTokenFromUserTokenId);
                     usertokenid = userToken.getUserTokenId();
@@ -156,9 +156,9 @@ public class WhydahAuthenticationManager implements AuthenticationManager {
                     forwardingTokenGenerator = () -> {
                         String forwardingUserTicket = UUID.randomUUID().toString();
                         CommandCreateTicketForUserTokenID commandCreateTicketForUserTokenID = new CommandCreateTicketForUserTokenID(
-                                URI.create(applicationCredentialStore.getSecurityTokenServiceUri()),
-                                applicationCredentialStore.getApplicationTokenId(),
-                                ApplicationCredentialMapper.toXML(applicationCredentialStore.getApplicationCredential()),
+                                URI.create(applicationTokenSession.getSecurityTokenServiceUri()),
+                                applicationTokenSession.getApplicationToken(),
+                                ApplicationCredentialMapper.toXML(applicationTokenSession.getApplicationCredential()),
                                 forwardingUserTicket,
                                 theUserTokenId
                         );
@@ -197,8 +197,8 @@ public class WhydahAuthenticationManager implements AuthenticationManager {
             throw new UnauthorizedException();
         }
 
-        final String securityTokenServiceUri = applicationCredentialStore.getSecurityTokenServiceUri();
-        final String applicationTokenId = applicationCredentialStore.getApplicationTokenId();
+        final String securityTokenServiceUri = applicationTokenSession.getSecurityTokenServiceUri();
+        final String applicationTokenId = applicationTokenSession.getApplicationToken();
         log.debug("Validate usertokenid using parameters {}, {}", securityTokenServiceUri, applicationTokenId);
         boolean okUserSession = new CommandValidateUserTokenId(URI.create(securityTokenServiceUri),
                 applicationTokenId,
@@ -208,7 +208,7 @@ public class WhydahAuthenticationManager implements AuthenticationManager {
             log.debug("Unsucessful resolving of authentication. ssoid {}, customerRef {}, usersession {} ", ssoId, customerRef, okUserSession);
             throw new UnauthorizedException();
         }
-        log.debug("Sucessful user authentication");
+        log.debug("Successful user authentication");
 
         return new CantaraUserAuthentication(ssoId, ssoId, usertokenid, customerRef, forwardingTokenGenerator, rolesGenerator);
     }
