@@ -33,10 +33,10 @@ public class CORSServletFilter implements Filter {
     public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain) throws IOException, ServletException {
         HttpServletRequest request = (HttpServletRequest) req;
         HttpServletResponse response = (HttpServletResponse) res;
-        response.addHeader("Access-Control-Allow-Origin", "*");
-        response.addHeader("Access-Control-Allow-Credentials", "true");
-        response.addHeader("Access-Control-Allow-Headers", "origin, content-type, accept, authorization");
-        response.addHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD");
+        response.addHeader("Access-Control-Allow-Origin", origin);
+        response.addHeader("Access-Control-Allow-Credentials", credentials);
+        response.addHeader("Access-Control-Allow-Headers", headers);
+        response.addHeader("Access-Control-Allow-Methods", methods);
         chain.doFilter(request, response);
     }
 

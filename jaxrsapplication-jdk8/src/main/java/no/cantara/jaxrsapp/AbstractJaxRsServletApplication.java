@@ -329,6 +329,7 @@ public abstract class AbstractJaxRsServletApplication<A extends AbstractJaxRsSer
         initVisualeHealth();
         initAdminServlet();
         initSecurity();
+        initAndAddServletFilter(DefaultExceptionServletFilter.class, DefaultExceptionServletFilter::new, "/*", EnumSet.allOf(DispatcherType.class));
         initAndAddServletFilter(CORSServletFilter.class, CORSServletFilter.builder()::build, "/*", EnumSet.allOf(DispatcherType.class));
         HealthService healthService = get(HealthService.class);
         healthService.registerHealthCheck("webserver.running", new HealthCheck() {
