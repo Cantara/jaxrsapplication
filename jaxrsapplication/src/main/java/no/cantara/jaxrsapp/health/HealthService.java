@@ -10,9 +10,12 @@ import org.slf4j.LoggerFactory;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.TemporalUnit;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
@@ -39,6 +42,7 @@ public class HealthService implements Runnable {
     private final long updateInterval;
     private final TemporalUnit updateIntervalUnit;
     private final String version;
+    private final String ip;
     private final AtomicLong healthComputeTimeMs = new AtomicLong(-1);
     private final HealthCheckRegistry healthCheckRegistry;
     private final List<HealthProbe> healthProbes = new CopyOnWriteArrayList<>();
@@ -48,11 +52,12 @@ public class HealthService implements Runnable {
      */
     ObjectNode currentHealth;
 
-    public HealthService(String version, HealthCheckRegistry healthCheckRegistry, long updateInterval, TemporalUnit updateIntervalUnit) {
+    public HealthService(String version, String ip, HealthCheckRegistry healthCheckRegistry, long updateInterval, TemporalUnit updateIntervalUnit) {
         this.updateInterval = updateInterval;
         this.updateIntervalUnit = updateIntervalUnit;
         this.currentHealthSerialized = new AtomicReference<>("{}");
         this.version = version;
+        this.ip = ip;
         this.healthCheckRegistry = healthCheckRegistry;
         this.healthUpdateThread = new Thread(this, "health-updater-" + serviceSequence.incrementAndGet());
         this.healthUpdateThread.start();
@@ -82,6 +87,7 @@ public class HealthService implements Runnable {
                 currentHealth = mapper.createObjectNode();
                 currentHealth.put("Status", "false");
                 currentHealth.put("version", version);
+                currentHealth.put("ip", ip);
                 currentHealth.put("running since", timeAtStart);
                 currentHealthSerialized.set(currentHealth.toPrettyString());
             } catch (Throwable t) {
@@ -207,4 +213,31 @@ public class HealthService implements Runnable {
         return true;
     }
 
+    public static String getMyIPAddresssesString() {
+        String ipAdresses = "";
+
+        try {
+            ipAdresses = InetAddress.getLocalHost().getHostAddress();
+            Enumeration n = NetworkInterface.getNetworkInterfaces();
+
+            while (n.hasMoreElements()) {
+                NetworkInterface networkInterface = (NetworkInterface) n.nextElement();
+
+                for (Enumeration a = networkInterface.getInetAddresses(); a.hasMoreElements(); ) {
+                    InetAddress addr = (InetAddress) a.nextElement();
+                    ipAdresses = ipAdresses + "  " + addr.getHostAddress();
+                }
+            }
+        } catch (Exception e) {
+            ipAdresses = "Not resolved";
+        }
+
+        return ipAdresses;
+    }
+
+    public static String getMyIPAddresssString() {
+        String fullString = getMyIPAddresssesString();
+        String ip = fullString.substring(0, fullString.indexOf(" "));
+        return ip;
+    }
 }

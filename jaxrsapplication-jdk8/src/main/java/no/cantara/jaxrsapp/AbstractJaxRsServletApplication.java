@@ -356,7 +356,8 @@ public abstract class AbstractJaxRsServletApplication<A extends AbstractJaxRsSer
 
     protected HealthService createHealthService(String version) {
         HealthCheckRegistry healthCheckRegistry = get(HealthCheckRegistry.class);
-        HealthService healthService = new HealthService(version, healthCheckRegistry, 1800, ChronoUnit.MILLIS);
+        String ip = HealthService.getMyIPAddresssString();
+        HealthService healthService = new HealthService(version, ip, healthCheckRegistry, 1800, ChronoUnit.MILLIS);
         return healthService;
     }
 
