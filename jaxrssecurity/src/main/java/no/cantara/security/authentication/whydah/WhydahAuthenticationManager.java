@@ -11,6 +11,7 @@ import net.whydah.sso.user.mappers.UserTokenMapper;
 import net.whydah.sso.user.types.UserApplicationRoleEntry;
 import net.whydah.sso.user.types.UserToken;
 import no.cantara.security.authentication.ApplicationAuthentication;
+import no.cantara.security.authentication.ApplicationTokenSession;
 import no.cantara.security.authentication.AuthenticationManager;
 import no.cantara.security.authentication.AuthenticationResult;
 import no.cantara.security.authentication.CantaraApplicationAuthentication;
@@ -49,10 +50,12 @@ public class WhydahAuthenticationManager implements AuthenticationManager {
         this.whydahService = new WhydahService(applicationTokenSession.getApplicationSession());
     }
 
+    @Override
     public UserAuthentication authenticateAsUser(String authorizationHeader) throws UnauthorizedException {
         return getCustomerRef(authorizationHeader);
     }
 
+    @Override
     public ApplicationAuthentication authenticateAsApplication(String authorizationHeader) throws UnauthorizedException {
         String authorization = authorizationHeader;
         if (authorization == null || authorization.isEmpty()) {
@@ -75,6 +78,7 @@ public class WhydahAuthenticationManager implements AuthenticationManager {
         return null;
     }
 
+    @Override
     public AuthenticationResult authenticate(String authorizationHeader) {
         String authorization = authorizationHeader;
         if (authorization == null || authorization.isEmpty() || authorization.length() < 39) {
@@ -101,6 +105,10 @@ public class WhydahAuthenticationManager implements AuthenticationManager {
         }
     }
 
+    @Override
+    public ApplicationTokenSession getApplicationTokenSession() {
+        return applicationTokenSession;
+    }
 
     private UserAuthentication getCustomerRef(String bearerToken) throws UnauthorizedException {
         String authorization = bearerToken;

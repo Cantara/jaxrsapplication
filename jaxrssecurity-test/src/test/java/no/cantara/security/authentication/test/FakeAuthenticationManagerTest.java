@@ -48,7 +48,7 @@ class FakeAuthenticationManagerTest {
 
     @Test
     public void thatFakeAuthenticationReconizesPatterns() {
-        AuthenticationManager manager = new FakeAuthenticationManager("fake-user", "fake-username", "fake-usertoken-id", "fake-customer-ref", "fake-application");
+        AuthenticationManager manager = new FakeAuthenticationManager("myappid", "fake-user", "fake-username", "fake-usertoken-id", "fake-customer-ref", "fake-application");
         {
             UserAuthentication userAuthentication = manager.authenticateAsUser("Bearer fake-sso-id: 4ug402jfn, fake-customer-ref: aertoh5893oi4ngf");
             assertEquals("4ug402jfn", userAuthentication.ssoId());
@@ -96,7 +96,7 @@ class FakeAuthenticationManagerTest {
 
     @Test
     public void thatFakeAuthenticationCanProduceFakeForwardingTokens() {
-        AuthenticationManager manager = new FakeAuthenticationManager("fake-user", "fake-username", "fake-usertoken-id", "fake-customer-ref", "fake-application");
+        AuthenticationManager manager = new FakeAuthenticationManager("myappid", "fake-user", "fake-username", "fake-usertoken-id", "fake-customer-ref", "fake-application");
         UserAuthentication userAuthentication = manager.authenticateAsUser("Bearer fake-sso-id: 4ug402jfn, fake-usertoken-id: 7be22680-fdaf-4544-938e-33cf1b1bd91f, fake-customer-ref: aertoh5893oi4ngf, fake-roles: AB=C4");
         assertEquals("fake-sso-id: 4ug402jfn, fake-username: 4ug402jfn, fake-usertoken-id: 7be22680-fdaf-4544-938e-33cf1b1bd91f, fake-customer-ref: aertoh5893oi4ngf, fake-roles: AB=C4", userAuthentication.forwardingToken());
         ApplicationAuthentication appAuthentication = manager.authenticateAsApplication("Bearer fake-application-id: ajihrgui57849hiu");
@@ -109,7 +109,7 @@ class FakeAuthenticationManagerTest {
 
     @Test
     public void thatFakeAuthenticationCanProduceEmptyRoleListWithoutException() {
-        AuthenticationManager manager = new FakeAuthenticationManager("fake-user", "fake-username", "fake-usertoken-id", "fake-customer-ref", "fake-application");
+        AuthenticationManager manager = new FakeAuthenticationManager("myappid", "fake-user", "fake-username", "fake-usertoken-id", "fake-customer-ref", "fake-application");
         UserAuthentication userAuthentication = manager.authenticateAsUser("Bearer fake-sso-id: 4ug402jfn, fake-customer-ref: aertoh5893oi4ngf, fake-roles: ace=123,bee=2x");
         Map<String, String> expectedRoles = new LinkedHashMap<>();
         expectedRoles.put("ace", "123");
@@ -119,7 +119,7 @@ class FakeAuthenticationManagerTest {
 
     @Test
     public void thatFakeAuthenticationProvidesDefaultFakeUserAndApplicationWhenHeaderOrTokenIsMissing() {
-        AuthenticationManager manager = new FakeAuthenticationManager("fake-user", "fake-username", "fake-usertoken-id", "fake-customer", "fake-application");
+        AuthenticationManager manager = new FakeAuthenticationManager("myappid", "fake-user", "fake-username", "fake-usertoken-id", "fake-customer", "fake-application");
         {
             UserAuthentication userAuthentication = manager.authenticateAsUser("").user().get();
             assertEquals("fake-user", userAuthentication.ssoId());
@@ -141,7 +141,7 @@ class FakeAuthenticationManagerTest {
 
     @Test
     public void thatFakeAuthenticationEvaluatesUnauthorizedWhenSpecialTokenIsUsed() {
-        AuthenticationManager manager = new FakeAuthenticationManager("fake-user", "fake-username", "fake-usertoken-id", "fake-customer", "fake-application");
+        AuthenticationManager manager = new FakeAuthenticationManager("myappid", "fake-user", "fake-username", "fake-usertoken-id", "fake-customer", "fake-application");
         try {
             manager.authenticateAsUser(FakeAuthenticationManager.BEARER_TOKEN_UNAUTHORIZED);
             Assertions.fail("Did not throw expected UnauthorizedException");

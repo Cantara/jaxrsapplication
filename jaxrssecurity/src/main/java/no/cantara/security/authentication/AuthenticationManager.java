@@ -7,4 +7,6 @@ public interface AuthenticationManager {
     ApplicationAuthentication authenticateAsApplication(String authorizationHeader) throws UnauthorizedException;
 
     AuthenticationResult authenticate(String authorizationHeader);
+
+    ApplicationTokenSession getApplicationTokenSession();
 }

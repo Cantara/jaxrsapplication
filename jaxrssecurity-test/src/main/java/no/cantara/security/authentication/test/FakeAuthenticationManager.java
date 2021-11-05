@@ -1,6 +1,7 @@
 package no.cantara.security.authentication.test;
 
 import no.cantara.security.authentication.ApplicationAuthentication;
+import no.cantara.security.authentication.ApplicationTokenSession;
 import no.cantara.security.authentication.AuthenticationManager;
 import no.cantara.security.authentication.AuthenticationResult;
 import no.cantara.security.authentication.CantaraApplicationAuthentication;
@@ -22,10 +23,12 @@ public class FakeAuthenticationManager implements AuthenticationManager {
     static final Pattern fakeUserTokenPattern = Pattern.compile("Bearer\\s+fake-sso-id:\\s*(?<ssoid>[^,]*),\\s*(?:fake-username:\\s*(?<username>[^,]*),)?\\s*(?:fake-usertoken-id:\\s*(?<usertokenid>[^,]*),)?\\s*fake-customer-ref:\\s*(?<customerref>[^,]*)(?:,\\s*fake-roles:\\s*(?<roles>.*))?");
     static final Pattern fakeApplicationTokenPattern = Pattern.compile("Bearer\\s+fake-application-id:\\s*(?<applicationid>.*)");
 
+    private final FakeApplicationTokenSession fakeApplicationTokenSession;
     private final UserAuthentication fakeUser;
     private final ApplicationAuthentication fakeApplication;
 
-    public FakeAuthenticationManager(String defaultFakeUserId, String defaultFakeUsername, String defaultFakeUsertokenId, String defaultFakeCustomerRef, String defaultFakeApplicationId) {
+    public FakeAuthenticationManager(String selfApplicationId, String defaultFakeUserId, String defaultFakeUsername, String defaultFakeUsertokenId, String defaultFakeCustomerRef, String defaultFakeApplicationId) {
+        fakeApplicationTokenSession = new FakeApplicationTokenSession(selfApplicationId);
         fakeUser = new CantaraUserAuthentication(defaultFakeUserId, defaultFakeUsername, defaultFakeUsertokenId, defaultFakeCustomerRef, () -> String.format("fake-sso-id: %s, fake-customer-ref: %s", defaultFakeUserId, defaultFakeCustomerRef), () -> {
             Map<String, String> roles = new LinkedHashMap<>();
             return roles;
@@ -119,5 +122,10 @@ public class FakeAuthenticationManager implements AuthenticationManager {
             return new CantaraAuthenticationResult(createApplicationFromMatch(appMatcher));
         }
         return new CantaraAuthenticationResult(fakeApplication);
+    }
+
+    @Override
+    public ApplicationTokenSession getApplicationTokenSession() {
+        return fakeApplicationTokenSession;
     }
 }

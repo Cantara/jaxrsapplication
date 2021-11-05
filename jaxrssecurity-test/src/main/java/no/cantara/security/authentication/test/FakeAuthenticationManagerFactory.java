@@ -22,7 +22,8 @@ public class FakeAuthenticationManagerFactory implements AuthenticationManagerFa
         String defaultFakeUsertokenId = applicationProperties.get("default-fake-usertoken-id", "fake-usertoken-id");
         String defaultFakeCustomerRef = applicationProperties.get("default-fake-customer-ref", "fake-customer");
         String defaultFakeApplicationId = applicationProperties.get("default-fake-application-id", "fake-application");
-        return new FakeAuthenticationManager(defaultFakeUserId, defaultFakeUsername, defaultFakeUsertokenId, defaultFakeCustomerRef, defaultFakeApplicationId);
+        String selfApplicationId = applicationProperties.get("self-application-id", "my-application");
+        return new FakeAuthenticationManager(selfApplicationId, defaultFakeUserId, defaultFakeUsername, defaultFakeUsertokenId, defaultFakeCustomerRef, defaultFakeApplicationId);
     }
 }
 
