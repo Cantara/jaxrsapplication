@@ -5,8 +5,8 @@ import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import no.cantara.jaxrsapp.JaxRsRegistry;
 import no.cantara.jaxrsapp.JaxRsServletApplication;
+import no.cantara.jaxrsapp.sample.greeter.DefaultGreetingCandidateRepository;
 import no.cantara.jaxrsapp.sample.greeter.Greeting;
-import no.cantara.jaxrsapp.sample.greeter.GreetingCandidate;
 import no.cantara.jaxrsapp.sample.greeter.GreetingCandidateRepository;
 import no.cantara.jaxrsapp.sample.greeter.GreetingService;
 import no.cantara.jaxrsapp.test.BeforeInitLifecycleListener;
@@ -15,8 +15,6 @@ import no.cantara.jaxrsapp.test.ConfigOverrides;
 import no.cantara.jaxrsapp.test.IntegrationTestExtension;
 import no.cantara.jaxrsapp.test.JaxRsApplicationProvider;
 import no.cantara.jaxrsapp.test.TestClient;
-import no.cantara.security.authorization.AccessManager;
-import org.apache.http.HttpHeaders;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,7 +24,6 @@ import org.slf4j.LoggerFactory;
 import java.io.PrintWriter;
 import java.security.SecureRandom;
 import java.util.List;
-import java.util.Objects;
 import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -76,41 +73,24 @@ public class GreetAndRandomizerIntegrationTest implements BeforeInitLifecycleLis
     }
 
     private GreetingCandidateRepository createGreetingCandidateRepository(JaxRsRegistry registry) {
-        AccessManager accessManager = registry.get(AccessManager.class);
-        Objects.requireNonNull(accessManager); // assert that security has been initialized
-        return new GreetingCandidateRepository() {
-            @Override
-            public List<GreetingCandidate> greetingCandidates() {
-                return List.of(
-                        new GreetingCandidate("Mock-1"),
-                        new GreetingCandidate("Mock-2"),
-                        new GreetingCandidate("Mock-3"),
-                        new GreetingCandidate("Mock-4"),
-                        new GreetingCandidate("Mock-5"),
-                        new GreetingCandidate("Mock-6"),
-                        new GreetingCandidate("Mock-7"),
-                        new GreetingCandidate("Mock-8"),
-                        new GreetingCandidate("Mock-9"),
-                        new GreetingCandidate("Mock-10")
-                );
-            }
-        };
+        return new DefaultGreetingCandidateRepository(
+                List.of("Mock-1", "Mock-2", "Mock-3", "Mock-4", "Mock-5", "Mock-6", "Mock-7", "Mock-8", "Mock-9", "Mock-10")
+        );
     }
 
     @Test
     public void thatHealthOfGreetingAndRandomizerBothWorks() {
-        JsonNode greeterHealth = greeterClient.get(JsonNode.class, "/health").expect200Ok().body();
+        JsonNode greeterHealth = greeterClient.get().path("/health").execute().expect200Ok().contentAsType(JsonNode.class);
         log.info("/health Response: {}", greeterHealth);
-        JsonNode randomizerHealth = randomizerClient.get(JsonNode.class, "/randomizer/health").expect200Ok().body();
+        JsonNode randomizerHealth = randomizerClient.get().path("/randomizer/health").execute().expect200Ok().contentAsType(JsonNode.class);
         log.info("/randomizer/health Response: {}", randomizerHealth);
     }
 
     @Test
     public void thatGreetingRestAPICanUseRandomizerToPickGreeting() {
         for (int i = 0; i < 10; i++) {
-            Greeting greeting = greeterClient.get(Greeting.class, "/greet/John",
-                            HttpHeaders.AUTHORIZATION, "Bearer fake-application-id: inttest-viewer")
-                    .expect200Ok().body();
+            Greeting greeting = greeterClient.get().path("/greet/John").fakeApplicationAuth("inttest-viewer").execute()
+                    .expect200Ok().contentAsType(Greeting.class);
             log.info("/greet/John Response: {}", greeting);
             assertTrue(greeting.getGreeting().startsWith("Mock-")); // assert that mocks are used
         }
@@ -128,13 +108,13 @@ public class GreetAndRandomizerIntegrationTest implements BeforeInitLifecycleLis
 
     @Test
     public void thatGreetingOpenApiWorks() {
-        String openApiYaml = greeterClient.get(String.class, "/openapi.yaml").expect200Ok().body();
+        String openApiYaml = greeterClient.get().path("/openapi.yaml").execute().expect200Ok().contentAsString();
         log.info("/openapi.yaml:\n{}", openApiYaml);
     }
 
     @Test
     public void thatRandomizerOpenApiWorks() {
-        String openApiYaml = randomizerClient.get(String.class, "/randomizer/openapi.yaml").expect200Ok().body();
+        String openApiYaml = randomizerClient.get().path("/randomizer/openapi.yaml").execute().expect200Ok().contentAsString();
         log.info("/randomizer/openapi.yaml:\n{}", openApiYaml);
     }
 }

@@ -12,7 +12,7 @@ public class RandomizerClientMock {
         return new RandomizerClient() {
             @Override
             public String getRandomString(String token, int maxLength) {
-                return greetingCandidateRepository.greetingCandidates().get(0).greeting;
+                return greetingCandidateRepository.greetingCandidates().get(0).getGreeting();
             }
 
             @Override

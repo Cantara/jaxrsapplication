@@ -19,25 +19,25 @@ public class RandomizerTest {
 
     @Test
     public void thatViewerCanDoAllExceptReseed() {
-        testClient.useAuthorization("Bearer fake-application-id: junit-viewer");
-        log.info("GET /randomizer/str/10 Response: {}", testClient.get(String.class, "/randomizer/str/10").expect200Ok().body());
-        log.info("GET /randomizer/int/1000 Response: {}", testClient.get(String.class, "/randomizer/int/1000").expect200Ok().body());
-        log.info("GET /randomizer/health Response: {}", testClient.get(JsonNode.class, "/randomizer/health").expect200Ok().body().toPrettyString());
-        testClient.put(JsonNode.class, "/randomizer/seed/12345").expect403Forbidden();
+        testClient.useFakeApplicationAuth("junit-viewer");
+        log.info("GET /randomizer/str/10 Response: {}", testClient.get().path("/randomizer/str/10").execute().expect200Ok().contentAsString());
+        log.info("GET /randomizer/int/1000 Response: {}", testClient.get().path("/randomizer/int/1000").execute().expect200Ok().contentAsString());
+        log.info("GET /randomizer/health Response: {}", testClient.get().path("/randomizer/health").execute().expect200Ok().contentAsType(JsonNode.class).toPrettyString());
+        testClient.put().path("/randomizer/seed/12345").execute().expect403Forbidden();
     }
 
     @Test
     public void thatAdminCanDoAll() {
-        testClient.useAuthorization("Bearer fake-application-id: junit-admin");
-        log.info("GET /randomizer/str/10 Response: {}", testClient.get(String.class, "/randomizer/str/10").expect200Ok().body());
-        log.info("GET /randomizer/int/1000 Response: {}", testClient.get(String.class, "/randomizer/int/1000").expect200Ok().body());
-        log.info("GET /randomizer/health Response: {}", testClient.get(JsonNode.class, "/randomizer/health").expect200Ok().body().toPrettyString());
-        testClient.put(JsonNode.class, "/randomizer/seed/12345").expect200Ok();
+        testClient.useFakeApplicationAuth("junit-admin");
+        log.info("GET /randomizer/str/10 Response: {}", testClient.get().path("/randomizer/str/10").execute().expect200Ok().contentAsString());
+        log.info("GET /randomizer/int/1000 Response: {}", testClient.get().path("/randomizer/int/1000").execute().expect200Ok().contentAsString());
+        log.info("GET /randomizer/health Response: {}", testClient.get().path("/randomizer/health").execute().expect200Ok().contentAsType(JsonNode.class).toPrettyString());
+        testClient.put().path("/randomizer/seed/12345").execute().expect200Ok();
     }
 
     @Test
     public void thatOpenApiWorks() {
-        String openApiYaml = testClient.get(String.class, "/randomizer/openapi.yaml").expect200Ok().body();
+        String openApiYaml = testClient.get().path("/randomizer/openapi.yaml").execute().expect200Ok().contentAsString();
         log.info("/randomizer/openapi.yaml:\n{}", openApiYaml);
     }
 }

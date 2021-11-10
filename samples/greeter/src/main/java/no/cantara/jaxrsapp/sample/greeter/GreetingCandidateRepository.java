@@ -5,4 +5,6 @@ import java.util.List;
 public interface GreetingCandidateRepository {
 
     List<GreetingCandidate> greetingCandidates();
+
+    void addCandidate(GreetingCandidate candidate);
 }

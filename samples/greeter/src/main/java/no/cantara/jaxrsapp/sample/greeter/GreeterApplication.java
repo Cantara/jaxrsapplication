@@ -8,7 +8,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class GreeterApplication extends AbstractJaxRsServletApplication<GreeterApplication> {
 
@@ -39,14 +38,7 @@ public class GreeterApplication extends AbstractJaxRsServletApplication<GreeterA
     }
 
     private GreetingCandidateRepository createGreetingCandidateRepository() {
-        return () -> List.of(
-                        "Hello",
-                        "Yo",
-                        "Hola",
-                        "Hei"
-                ).stream()
-                .map(GreetingCandidate::new)
-                .collect(Collectors.toList());
+        return new DefaultGreetingCandidateRepository(List.of("Hello", "Yo", "Hola", "Hei"));
     }
 
     private HttpRandomizerClient createHttpRandomizer() {
