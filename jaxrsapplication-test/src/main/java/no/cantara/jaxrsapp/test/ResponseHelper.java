@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.type.CollectionType;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import org.apache.http.Header;
 import org.apache.http.HeaderIterator;
+import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.util.EntityUtils;
@@ -70,14 +71,18 @@ public class ResponseHelper {
     public <T> List<T> contentAsList(Class<T> clazz) {
         List<T> body = (List<T>) bodyRef.get();
         if (body == null) {
+            HttpEntity entity = httpResponse.getEntity();
+            if (entity == null) {
+                return null;
+            }
             try {
                 CollectionType collectionType = TypeFactory.defaultInstance()
                         .constructCollectionType(List.class, clazz);
-                try (InputStream content = httpResponse.getEntity().getContent()) {
+                try (InputStream content = entity.getContent()) {
                     body = mapper.readValue(content, collectionType);
                 }
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                throw new UncheckedIOException(e);
             }
             bodyRef.set(body);
         }
@@ -87,12 +92,16 @@ public class ResponseHelper {
     public <T> T contentAsType(TypeReference<T> typeReference) {
         T body = (T) bodyRef.get();
         if (body == null) {
+            HttpEntity entity = httpResponse.getEntity();
+            if (entity == null) {
+                return null;
+            }
             try {
-                try (InputStream content = httpResponse.getEntity().getContent()) {
+                try (InputStream content = entity.getContent()) {
                     body = mapper.readValue(content, typeReference);
                 }
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                throw new UncheckedIOException(e);
             }
             bodyRef.set(body);
         }
@@ -102,24 +111,28 @@ public class ResponseHelper {
     public <T> T contentAsType(Class<T> entityClass) {
         T body = (T) bodyRef.get();
         if (body == null) {
+            HttpEntity entity = httpResponse.getEntity();
+            if (entity == null) {
+                return null;
+            }
             try {
                 if (String.class.equals(entityClass)) {
-                    body = (T) EntityUtils.toString(httpResponse.getEntity(), StandardCharsets.UTF_8);
+                    body = (T) EntityUtils.toString(entity, StandardCharsets.UTF_8);
                 } else if (byte[].class.equals(entityClass)) {
                     ByteArrayOutputStream baos = new ByteArrayOutputStream(1024);
-                    httpResponse.getEntity().writeTo(baos);
-                    return (T) baos.toByteArray();
+                    entity.writeTo(baos);
+                    body = (T) baos.toByteArray();
                 } else if (ByteBuffer.class.equals(entityClass)) {
                     ByteArrayOutputStream baos = new ByteArrayOutputStream(1024);
-                    httpResponse.getEntity().writeTo(baos);
-                    return (T) ByteBuffer.wrap(baos.toByteArray());
+                    entity.writeTo(baos);
+                    body = (T) ByteBuffer.wrap(baos.toByteArray());
                 } else {
-                    try (InputStream content = httpResponse.getEntity().getContent()) {
+                    try (InputStream content = entity.getContent()) {
                         body = mapper.readValue(content, entityClass);
                     }
                 }
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                throw new UncheckedIOException(e);
             }
             bodyRef.set(body);
         }
@@ -127,12 +140,20 @@ public class ResponseHelper {
     }
 
     public String contentAsString() {
-        return contentAsType(String.class);
+        String value = contentAsType(String.class);
+        if (value == null) {
+            return "";
+        }
+        return value;
     }
 
     public InputStream content() {
         try {
-            return httpResponse.getEntity().getContent();
+            HttpEntity entity = httpResponse.getEntity();
+            if (entity == null) {
+                return null;
+            }
+            return entity.getContent();
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -147,7 +168,11 @@ public class ResponseHelper {
      * a negative number is returned.
      */
     public long contentLength() {
-        return httpResponse.getEntity().getContentLength();
+        HttpEntity entity = httpResponse.getEntity();
+        if (entity == null) {
+            return 0;
+        }
+        return entity.getContentLength();
     }
 
     /**
@@ -160,7 +185,11 @@ public class ResponseHelper {
      * {@code null} if the content type is unknown
      */
     public String contentType() {
-        return httpResponse.getEntity().getContentType().getValue();
+        HttpEntity entity = httpResponse.getEntity();
+        if (entity == null) {
+            return null;
+        }
+        return entity.getContentType().getValue();
     }
 
     /**
@@ -174,7 +203,11 @@ public class ResponseHelper {
      * {@code null} if the content encoding is unknown
      */
     public String contentEncoding() {
-        return httpResponse.getEntity().getContentEncoding().getValue();
+        HttpEntity entity = httpResponse.getEntity();
+        if (entity == null) {
+            return null;
+        }
+        return entity.getContentEncoding().getValue();
     }
 
     public ResponseHelper expectAnyOf(int... anyOf) {
