@@ -12,8 +12,11 @@ import io.dropwizard.metrics.servlets.AdminServlet;
 import io.dropwizard.metrics.servlets.HealthCheckServlet;
 import io.dropwizard.metrics.servlets.MetricsServlet;
 import io.swagger.v3.oas.integration.SwaggerConfiguration;
+import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
+import io.swagger.v3.oas.models.security.SecurityScheme;
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.Filter;
 import jakarta.ws.rs.container.ContainerRequestContext;
@@ -25,6 +28,7 @@ import no.cantara.jaxrsapp.health.HealthResource;
 import no.cantara.jaxrsapp.health.HealthService;
 import no.cantara.jaxrsapp.metrics.JaxRsMetrics;
 import no.cantara.jaxrsapp.openapi.JaxRsOpenApiResource;
+import no.cantara.jaxrsapp.openapi.JaxRsOpenApiSpecFilter;
 import no.cantara.jaxrsapp.security.CORSServletFilter;
 import no.cantara.jaxrsapp.security.SecurityFilter;
 import no.cantara.security.authentication.AuthenticationManager;
@@ -53,6 +57,7 @@ import java.net.URL;
 import java.time.temporal.ChronoUnit;
 import java.util.EnumSet;
 import java.util.EventListener;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -351,19 +356,32 @@ public abstract class AbstractJaxRsServletApplication<A extends AbstractJaxRsSer
 
     protected JaxRsOpenApiResource createOpenApiResource() {
         Info info = new Info()
-                .title(alias() + " API");
+                .title(alias() + " API")
+                .version(version);
         String contextPath = normalizeContextPath(config.get("server.context-path"));
-        OpenAPI oas = new OpenAPI()
-                .info(info)
-                .addServersItem(new io.swagger.v3.oas.models.servers.Server() {
+        OpenAPI openAPI = new OpenAPI()
+                .info(info);
+        String applicationUrl = config.get("application.url");
+        if (applicationUrl != null) {
+            openAPI.addServersItem(new io.swagger.v3.oas.models.servers.Server().url(applicationUrl));
+        }
+        openAPI.addServersItem(new io.swagger.v3.oas.models.servers.Server() {
                     @Override
                     public String getUrl() {
                         return "http://localhost:" + getBoundPort() + contextPath;
                     }
-                })
-                .addServersItem(new io.swagger.v3.oas.models.servers.Server().url(contextPath));
+                });
+        Map<String, SecurityScheme> securitySchemes = new LinkedHashMap<>();
+        securitySchemes.put("bearerAuth", new SecurityScheme()
+                .type(SecurityScheme.Type.HTTP)
+                .name("Authorization")
+                .in(SecurityScheme.In.HEADER)
+                .scheme("http"));
+        openAPI.components(new Components().securitySchemes(securitySchemes));
+        openAPI.addSecurityItem(new SecurityRequirement().addList("bearerAuth"));
         SwaggerConfiguration oasConfig = new SwaggerConfiguration()
-                .openAPI(oas)
+                .openAPI(openAPI)
+                .filterClass(JaxRsOpenApiSpecFilter.class.getName())
                 .prettyPrint(true);
         JaxRsOpenApiResource openApiResource = (JaxRsOpenApiResource) new JaxRsOpenApiResource()
                 .openApiConfiguration(oasConfig);

@@ -2,6 +2,8 @@ package no.cantara.jaxrsapp.health;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
@@ -17,6 +19,9 @@ import java.time.Instant;
 
 @Path("/health")
 public class HealthResource {
+
+    public static final io.swagger.v3.oas.models.security.SecurityRequirement securityRequirement = new io.swagger.v3.oas.models.security.SecurityRequirement();
+
     private static final Logger log = LoggerFactory.getLogger(HealthResource.class);
 
     private final HealthService healthService;
@@ -28,7 +33,8 @@ public class HealthResource {
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    @SecurityOverride
+    @SecurityOverride // disable authorization requirement in security-filter
+    @SecurityRequirements(@SecurityRequirement(name = "none")) // disable authorization requirement in openapi spec
     public Response getHealth() {
         try {
             String currentHealthJsonWithoutTimestamp = healthService.getCurrentHealthJson();
