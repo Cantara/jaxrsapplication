@@ -5,12 +5,12 @@
     <parent>
         <groupId>no.cantara.jaxrsapp</groupId>
         <artifactId>jaxrsapplication-parent-jdk8</artifactId>
-        <version>0.16.2-SNAPSHOT</version>
+        <version>0.16.2</version>
         <relativePath>../jaxrsapplication-parent-jdk8/pom.xml</relativePath>
     </parent>
 
     <artifactId>jaxrsapplication-test-jdk8</artifactId>
-    <version>0.16.2-SNAPSHOT</version>
+    <version>0.16.2</version>
     <packaging>jar</packaging>
 
     <name>JaxRsApplication-Test-JDK8</name>
