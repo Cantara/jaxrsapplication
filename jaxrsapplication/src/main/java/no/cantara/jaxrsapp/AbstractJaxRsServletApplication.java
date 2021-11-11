@@ -376,7 +376,7 @@ public abstract class AbstractJaxRsServletApplication<A extends AbstractJaxRsSer
                 .type(SecurityScheme.Type.HTTP)
                 .name("Authorization")
                 .in(SecurityScheme.In.HEADER)
-                .scheme("http"));
+                .scheme("bearer"));
         openAPI.components(new Components().securitySchemes(securitySchemes));
         openAPI.addSecurityItem(new SecurityRequirement().addList("bearerAuth"));
         SwaggerConfiguration oasConfig = new SwaggerConfiguration()
