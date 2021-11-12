@@ -38,7 +38,7 @@ public class ResponseHelper {
         try {
             this.httpResponse = response.returnResponse();
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new UncheckedIOException(e);
         }
     }
 
