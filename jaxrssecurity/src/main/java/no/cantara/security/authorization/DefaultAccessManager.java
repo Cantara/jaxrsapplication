@@ -567,9 +567,11 @@ public class DefaultAccessManager implements AccessManager {
         if (cup == null) {
             // TODO get user-group assignment or user-tags from token or SSO api
             cup = defaultUserPermissions;
+            log.trace("No configured permissions for user '{}', using user default permissions", userId);
         }
         Action action = new Action(actionService, actionValue.trim());
         Policy policy = cup.getEffectivePolicy();
+        log.trace("Using effective user '{}' policy: {}", userId, policy.toJson());
         PermissionDecision permissionDecision = policy.decidePermission(action);
         return permissionDecision.isAllowed();
     }
@@ -582,9 +584,13 @@ public class DefaultAccessManager implements AccessManager {
         if (cap == null) {
             // TODO get application-group assignment or user-tags from token or SSO api
             cap = defaultApplicationPermissions;
+            log.trace("No configured permissions for application '{}', using application default permissions", applicationId);
+        } else {
+            log.trace("Using permissions configured specifically for application '{}'", applicationId);
         }
         Action action = new Action(actionService, actionValue.trim());
         Policy policy = cap.getEffectivePolicy();
+        log.trace("Using effective application '{}' policy: {}", applicationId, policy.toJson());
         PermissionDecision permissionDecision = policy.decidePermission(action);
         return permissionDecision.isAllowed();
     }
