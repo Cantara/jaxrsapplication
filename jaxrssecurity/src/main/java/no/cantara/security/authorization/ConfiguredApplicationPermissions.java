@@ -18,7 +18,7 @@ public class ConfiguredApplicationPermissions {
         this.roles = new ArrayList<>(roles);
         this.policies = new ArrayList<>(policies);
         this.effectivePolicy = Policy.builder()
-                .policyId("effective-policy-for-user-" + applicationId)
+                .policyId("effective-policy-for-application-" + applicationId)
                 .aggregate(groups.stream().map(Group::getPolicy))
                 .aggregate(roles.stream().map(Role::getPolicy))
                 .aggregate(policies.stream())
