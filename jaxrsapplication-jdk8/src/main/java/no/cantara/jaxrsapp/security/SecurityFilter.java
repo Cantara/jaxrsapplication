@@ -38,7 +38,9 @@ public class SecurityFilter implements ContainerRequestFilter {
         Method resourceMethod = jaxRsEndpointResolver.apply(requestContext);
         SecurityOverride securityOverride = resourceMethod.getDeclaredAnnotation(SecurityOverride.class);
         if (securityOverride != null) {
-            log.trace("Access granted through security-override to: {} /{}", requestContext.getMethod(), requestContext.getUriInfo().getPath());
+            if (securityOverride.logAccess()) {
+                log.trace("Access granted through security-override to: {} /{}", requestContext.getMethod(), requestContext.getUriInfo().getPath());
+            }
             return; // access granted, no authentication or access-check needed
         }
         String authorizationHeader = requestContext.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);

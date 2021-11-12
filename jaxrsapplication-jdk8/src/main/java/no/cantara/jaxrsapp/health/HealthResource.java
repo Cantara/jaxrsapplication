@@ -28,7 +28,7 @@ public class HealthResource {
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    @SecurityOverride
+    @SecurityOverride(logAccess = false) // disable authorization requirement in security-filter and do not trace-log access to this endpoint
     public Response getHealth() {
         try {
             String currentHealthJsonWithoutTimestamp = healthService.getCurrentHealthJson();

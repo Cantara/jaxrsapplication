@@ -33,7 +33,7 @@ public class HealthResource {
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    @SecurityOverride // disable authorization requirement in security-filter
+    @SecurityOverride(logAccess = false) // disable authorization requirement in security-filter and do not trace-log access to this endpoint
     @SecurityRequirements(@SecurityRequirement(name = "none")) // disable authorization requirement in openapi spec
     public Response getHealth() {
         try {
