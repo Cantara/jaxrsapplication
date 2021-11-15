@@ -120,7 +120,10 @@ public abstract class AbstractJaxRsServletApplication<A extends AbstractJaxRsSer
     public <T> JaxRsRegistry put(String key, T instance) {
         Objects.requireNonNull(key);
         Objects.requireNonNull(instance);
-        this.singletonByType.put(key, instance);
+        Object oldValue = this.singletonByType.put(key, instance);
+        if (oldValue != null) {
+            log.warn("Possible initialization error. Overwriting value for key '{}'. Previous value was of class: {}", key, oldValue.getClass().getName());
+        }
         return this;
     }
 
