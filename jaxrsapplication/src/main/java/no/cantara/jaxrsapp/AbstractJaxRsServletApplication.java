@@ -129,7 +129,10 @@ public abstract class AbstractJaxRsServletApplication<A extends AbstractJaxRsSer
     public <T> JaxRsRegistry put(String key, T instance) {
         Objects.requireNonNull(key);
         Objects.requireNonNull(instance);
-        this.singletonByType.put(key, instance);
+        Object oldValue = this.singletonByType.put(key, instance);
+        if (oldValue != null) {
+            log.warn("Possible initialization error. Overwriting value for key '{}'. Previous value was of class: {}", key, oldValue.getClass().getName());
+        }
         return this;
     }
 
@@ -366,11 +369,11 @@ public abstract class AbstractJaxRsServletApplication<A extends AbstractJaxRsSer
             openAPI.addServersItem(new io.swagger.v3.oas.models.servers.Server().url(applicationUrl));
         }
         openAPI.addServersItem(new io.swagger.v3.oas.models.servers.Server() {
-                    @Override
-                    public String getUrl() {
-                        return "http://localhost:" + getBoundPort() + contextPath;
-                    }
-                });
+            @Override
+            public String getUrl() {
+                return "http://localhost:" + getBoundPort() + contextPath;
+            }
+        });
         Map<String, SecurityScheme> securitySchemes = new LinkedHashMap<>();
         securitySchemes.put("bearerAuth", new SecurityScheme()
                 .type(SecurityScheme.Type.HTTP)
