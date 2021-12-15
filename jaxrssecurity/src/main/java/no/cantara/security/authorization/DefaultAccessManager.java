@@ -55,7 +55,7 @@ public class DefaultAccessManager implements AccessManager {
 
     Map<String, Action> initActions(ApplicationProperties authorizationConfig) {
         Map<String, Action> actionByDefinition = new LinkedHashMap<>();
-        String[] actionValues = authorizationConfig.get("actions").split(",");
+        String[] actionValues = authorizationConfig.get("actions", "").split(",");
         for (String actionValue : actionValues) {
             actionValue = actionValue.trim();
             if (!actionValue.isEmpty()) {
