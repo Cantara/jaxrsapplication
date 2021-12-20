@@ -21,36 +21,42 @@ public class JwtHelper {
     private static final Logger log = LoggerFactory.getLogger(JwtHelper.class);
 
     final String oauth2Uri;
+    final String token;
+    final DecodedJWT jwt;
 
-    public JwtHelper(String oauth2Uri) {
-        this.oauth2Uri = oauth2Uri;
+    public JwtHelper(String oauth2Uri, String token) {
+        this(oauth2Uri, token, JWT.decode(token));
     }
 
-    public boolean isExpiredOrInvalid(String jwt) {
+    public JwtHelper(String oauth2Uri, String token, DecodedJWT jwt) {
+        this.oauth2Uri = oauth2Uri;
+        this.token = token;
+        this.jwt = JWT.decode(token);
+    }
+
+    public boolean isExpiredOrInvalid(String token) {
         try {
-            Long time = getClaimFromJwtToken(jwt, "exp", Long.class);
+            Long time = getClaimFromJwtToken("exp", Long.class);
             return time * 1000L <= System.currentTimeMillis();
         } catch (Exception ex) {
             return true;
         }
     }
 
-    public String getUserNameFromJwtToken(String token) throws JwkException {
-        return getClaimFromJwtToken(token, "sub", String.class);
+    public String getUserNameFromJwtToken() throws JwkException {
+        return getClaimFromJwtToken("sub", String.class);
     }
 
-    public String getUserTokenFromJwtToken(String token) throws JwkException {
-        return getClaimFromJwtToken(token, "usertoken_id", String.class);
+    public String getUserTokenFromJwtToken() throws JwkException {
+        return getClaimFromJwtToken("usertoken_id", String.class);
     }
 
-    public String getCustomerRefFromJwtToken(String token) throws JwkException {
-        return getClaimFromJwtToken(token, "customer_ref", String.class);
+    public String getCustomerRefFromJwtToken() throws JwkException {
+        return getClaimFromJwtToken("customer_ref", String.class);
     }
 
-
-    public <T> T getClaimFromJwtToken(String authToken, String claimName, Class<T> requiredType) throws JwkException {
+    public <T> T getClaimFromJwtToken(String claimName, Class<T> requiredType) throws JwkException {
         String oauth2Issuer = oauth2Uri;
-        DecodedJWT jwt = JWT.decode(authToken);
         JwkProvider provider = new JwkProviderBuilder(oauth2Issuer)
                 .cached(10, 24, TimeUnit.HOURS)
                 .rateLimited(10, 1, TimeUnit.MINUTES).build();
@@ -60,7 +66,7 @@ public class JwtHelper {
         JWTVerifier verifier = JWT.require(algorithm)
                 .withIssuer(oauth2Issuer)
                 .build();
-        DecodedJWT djwt = verifier.verify(authToken);
+        DecodedJWT djwt = verifier.verify(jwt);
         return djwt.getClaim(claimName).as(requiredType);
     }
 }

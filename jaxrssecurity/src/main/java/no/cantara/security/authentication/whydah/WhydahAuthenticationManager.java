@@ -1,12 +1,9 @@
 package no.cantara.security.authentication.whydah;
 
 import com.auth0.jwk.JwkException;
+import com.auth0.jwt.JWT;
 import com.auth0.jwt.exceptions.JWTDecodeException;
-import net.whydah.sso.application.mappers.ApplicationCredentialMapper;
-import net.whydah.sso.commands.appauth.CommandGetApplicationIdFromApplicationTokenId;
-import net.whydah.sso.commands.userauth.CommandCreateTicketForUserTokenID;
-import net.whydah.sso.commands.userauth.CommandGetUserTokenByUserTicket;
-import net.whydah.sso.commands.userauth.CommandValidateUserTokenId;
+import com.auth0.jwt.interfaces.DecodedJWT;
 import net.whydah.sso.user.mappers.UserTokenMapper;
 import net.whydah.sso.user.types.UserApplicationRoleEntry;
 import net.whydah.sso.user.types.UserToken;
@@ -22,96 +19,38 @@ import no.cantara.security.authentication.UserAuthentication;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.URI;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.function.Supplier;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class WhydahAuthenticationManager implements AuthenticationManager {
 
     private static final Logger log = LoggerFactory.getLogger(WhydahAuthenticationManager.class);
+    private static Pattern appTokenIdPattern = Pattern.compile("<applicationtokenID>([^<]*)</applicationtokenID>");
 
     private final Set<String> roleNamesFilter;
     private final String oauth2Uri;
-    private final JaxRsWhydahSession applicationTokenSession;
+    private final ApplicationTokenSession applicationTokenSession;
     private final WhydahService whydahService;
 
-    public WhydahAuthenticationManager(Collection<String> roleNamesFilter, String oauth2Uri, JaxRsWhydahSession applicationTokenSession) {
+    public WhydahAuthenticationManager(Collection<String> roleNamesFilter, String oauth2Uri, ApplicationTokenSession applicationTokenSession, WhydahService whydahService) {
         this.roleNamesFilter = roleNamesFilter.stream()
                 .map(String::trim)
                 .map(String::toLowerCase)
                 .collect(Collectors.toSet());
         this.oauth2Uri = oauth2Uri;
         this.applicationTokenSession = applicationTokenSession;
-        this.whydahService = new WhydahService(applicationTokenSession.getApplicationSession());
+        this.whydahService = whydahService;
     }
 
     @Override
-    public UserAuthentication authenticateAsUser(String authorizationHeader) throws UnauthorizedException {
-        return getCustomerRef(authorizationHeader);
-    }
-
-    @Override
-    public ApplicationAuthentication authenticateAsApplication(String authorizationHeader) throws UnauthorizedException {
+    public UserAuthentication authenticateAsUser(final String authorizationHeader) throws UnauthorizedException {
         String authorization = authorizationHeader;
-        if (authorization == null || authorization.isEmpty()) {
-            return null;
-        }
-        try {
-            String token = authorization.substring("Bearer ".length());
-
-            final String applicationId = new CommandGetApplicationIdFromApplicationTokenId(
-                    URI.create(applicationTokenSession.getSecurityTokenServiceUri()),
-                    token).execute();
-
-            log.trace("Lookup application by applicationTokenId {}. Id found {}", token, applicationId);
-            if (applicationId != null) {
-                return new CantaraApplicationAuthentication(applicationId, token);
-            }
-        } catch (Exception e) {
-            log.error("Exception in attempt to resolve authorization, bearerToken: " + authorizationHeader, e);
-        }
-        return null;
-    }
-
-    @Override
-    public AuthenticationResult authenticate(String authorizationHeader) {
-        String authorization = authorizationHeader;
-        if (authorization == null || authorization.isEmpty() || authorization.length() < 39) {
-            return new CantaraAuthenticationResult(null);
-        }
-        String token = authorization.substring("Bearer ".length());
-
-        if (token.length() < 33) {
-            //Assume application-token-id
-            try {
-                ApplicationAuthentication applicationAuthentication = authenticateAsApplication(authorization);
-                return new CantaraAuthenticationResult(applicationAuthentication);
-            } catch (UnauthorizedException e) {
-                return new CantaraAuthenticationResult(null);
-            }
-        } else {
-            //Assume jwt or whydah token
-            try {
-                UserAuthentication userAuthentication = authenticateAsUser(authorization);
-                return new CantaraAuthenticationResult(userAuthentication);
-            } catch (UnauthorizedException e) {
-                return new CantaraAuthenticationResult(null);
-            }
-        }
-    }
-
-    @Override
-    public ApplicationTokenSession getApplicationTokenSession() {
-        return applicationTokenSession;
-    }
-
-    private UserAuthentication getCustomerRef(String bearerToken) throws UnauthorizedException {
-        String authorization = bearerToken;
         if (authorization == null || authorization.isEmpty()) {
             throw new UnauthorizedException();
         }
@@ -122,37 +61,45 @@ public class WhydahAuthenticationManager implements AuthenticationManager {
         Supplier<String> forwardingTokenGenerator = () -> token; // forwarding incoming token by default
         Supplier<Map<String, String>> rolesGenerator;
         if (token.length() > 50) {
-            log.debug("Suspected JWT-token is {}", token);
+            log.trace("Suspected JWT-token is {}", token);
         } else {
-            log.debug("Suspected whydah-userticket is {}", token);
+            log.trace("Suspected whydah-userticket is {}", token);
         }
+        DecodedJWT decodedJWT = null;
         try {
-            log.debug("Resolving JWT-token");
-            JwtHelper jwtUtils = new JwtHelper(oauth2Uri);
-            ssoId = jwtUtils.getUserNameFromJwtToken(token);
-            customerRef = jwtUtils.getCustomerRefFromJwtToken(token);
-            usertokenid = jwtUtils.getUserTokenFromJwtToken(token);
-            final String theUserTokenId = usertokenid;
-            rolesGenerator = () -> {
-                UserToken userToken = whydahService.findUserTokenFromUserTokenId(theUserTokenId);
-                if (userToken == null) {
-                    return Collections.emptyMap();
-                }
-                Map<String, String> roleValueByName = userToken.getRoleList().stream()
-                        .filter(re -> roleNamesFilter.contains(re.getRoleName().toLowerCase()))
-                        .collect(Collectors.toMap(UserApplicationRoleEntry::getRoleName, UserApplicationRoleEntry::getRoleValue));
-                return roleValueByName;
-            };
-            log.debug("Resolved JWT-token. Found customerRef {} and usertokenid {}", customerRef, usertokenid);
+            decodedJWT = JWT.decode(token);
+            log.trace("token is a JWT token: {}", token);
         } catch (JWTDecodeException e) {
-            log.debug("JWTDecoding threw exception", e);
+            log.trace("token is not a JWT token: {}", token);
+        }
+        if (decodedJWT != null) {
+            try {
+                log.debug("Resolving JWT-token");
+                JwtHelper jwtUtils = new JwtHelper(oauth2Uri, token);
+                ssoId = jwtUtils.getUserNameFromJwtToken();
+                customerRef = jwtUtils.getCustomerRefFromJwtToken();
+                usertokenid = jwtUtils.getUserTokenFromJwtToken();
+                final String theUserTokenId = usertokenid;
+                rolesGenerator = () -> {
+                    UserToken userToken = whydahService.findUserTokenFromUserTokenId(theUserTokenId);
+                    if (userToken == null) {
+                        return Collections.emptyMap();
+                    }
+                    Map<String, String> roleValueByName = userToken.getRoleList().stream()
+                            .filter(re -> roleNamesFilter.contains(re.getRoleName().toLowerCase()))
+                            .collect(Collectors.toMap(UserApplicationRoleEntry::getRoleName, UserApplicationRoleEntry::getRoleValue));
+                    return roleValueByName;
+                };
+                log.trace("Resolved JWT-token. Found customerRef {} and usertokenid {}", customerRef, usertokenid);
+            } catch (JwkException e) {
+                log.warn("Token {} throws JwkException during authentication {} ", token, e);
+                throw new UnauthorizedException();
+            }
+        } else {
             try {
                 log.debug("Resolving Whydah-userticket");
                 String userticket = token;
-
-                final String userTokenFromUserTokenId = new CommandGetUserTokenByUserTicket(URI.create(applicationTokenSession.getSecurityTokenServiceUri()),
-                        applicationTokenSession.getApplicationToken(),
-                        ApplicationCredentialMapper.toXML(applicationTokenSession.getApplicationCredential()), userticket).execute();
+                final String userTokenFromUserTokenId = whydahService.getUserTokenByUserTicket(userticket);
                 if (userTokenFromUserTokenId != null && UserTokenMapper.validateUserTokenMD5Signature(userTokenFromUserTokenId)) {
                     final UserToken userToken = UserTokenMapper.fromUserTokenXml(userTokenFromUserTokenId);
                     usertokenid = userToken.getUserTokenId();
@@ -162,16 +109,8 @@ public class WhydahAuthenticationManager implements AuthenticationManager {
                     final String theSsoId = ssoId;
                     final String theCustomerRef = customerRef;
                     forwardingTokenGenerator = () -> {
-                        String forwardingUserTicket = UUID.randomUUID().toString();
-                        CommandCreateTicketForUserTokenID commandCreateTicketForUserTokenID = new CommandCreateTicketForUserTokenID(
-                                URI.create(applicationTokenSession.getSecurityTokenServiceUri()),
-                                applicationTokenSession.getApplicationToken(),
-                                ApplicationCredentialMapper.toXML(applicationTokenSession.getApplicationCredential()),
-                                forwardingUserTicket,
-                                theUserTokenId
-                        );
-                        Boolean result = commandCreateTicketForUserTokenID.execute();
-                        if (result == null || !result) {
+                        String forwardingUserTicket = whydahService.createTicketForUserTokenID(theUserTokenId);
+                        if (forwardingUserTicket == null) {
                             throw new RuntimeException(String.format("Unable to generate user-ticket for user. ssoId=%s, customerRef=%s", theSsoId, theCustomerRef));
                         }
                         return forwardingUserTicket;
@@ -195,9 +134,6 @@ public class WhydahAuthenticationManager implements AuthenticationManager {
                 log.info("Token {} throws Exception during whydah-authentication {} ", token, ex);
                 throw new UnauthorizedException();
             }
-        } catch (JwkException e) {
-            log.info("Token {} throws JwkException during authentication {} ", token, e);
-            throw new UnauthorizedException();
         }
 
         if (usertokenid == null || usertokenid.isEmpty()) {
@@ -205,12 +141,7 @@ public class WhydahAuthenticationManager implements AuthenticationManager {
             throw new UnauthorizedException();
         }
 
-        final String securityTokenServiceUri = applicationTokenSession.getSecurityTokenServiceUri();
-        final String applicationTokenId = applicationTokenSession.getApplicationToken();
-        log.debug("Validate usertokenid using parameters {}, {}", securityTokenServiceUri, applicationTokenId);
-        boolean okUserSession = new CommandValidateUserTokenId(URI.create(securityTokenServiceUri),
-                applicationTokenId,
-                usertokenid).execute();
+        boolean okUserSession = whydahService.validateUserTokenId(usertokenid);
 
         if (ssoId == null || ssoId.isEmpty() || customerRef == null || customerRef.isEmpty() || !okUserSession) {
             log.debug("Unsucessful resolving of authentication. ssoid {}, customerRef {}, usersession {} ", ssoId, customerRef, okUserSession);
@@ -219,6 +150,76 @@ public class WhydahAuthenticationManager implements AuthenticationManager {
         log.debug("Successful user authentication");
 
         return new CantaraUserAuthentication(ssoId, ssoId, usertokenid, customerRef, forwardingTokenGenerator, rolesGenerator);
+    }
+
+
+    @Override
+    public ApplicationAuthentication authenticateAsApplication(final String authorizationHeader) throws
+            UnauthorizedException {
+        String authorization = authorizationHeader;
+        if (authorization == null || authorization.isEmpty()) {
+            return null;
+        }
+        try {
+            String token = authorization.substring("Bearer ".length());
+
+            if (token.contains("<applicationtoken>")) {
+                // assume that bearer token is application-token xml, extract the application-token-id from it
+                Matcher m = appTokenIdPattern.matcher(token);
+                if (m.find()) {
+                    String applicationTokenId = m.group(1);
+                    // Use only the application-token-id from the xml, we cannot trust anything else unless it was signed
+                    final String applicationId = whydahService.getApplicationIdFromApplicationTokenId(applicationTokenId);
+                    log.trace("Lookup application by applicationTokenId {}. Id found {}", token, applicationId);
+                    if (applicationId != null) {
+                        return new CantaraApplicationAuthentication(applicationId, applicationTokenId);
+                    }
+                } else {
+                    log.warn("Invalid application-token XML sent as bearer token. This is not a supported authentication mechanism. Token: {}", token);
+                }
+            } else {
+                // assume that bearer token is application-token-id
+                final String applicationId = whydahService.getApplicationIdFromApplicationTokenId(token);
+                log.trace("Lookup application by applicationTokenId {}. Id found {}", token, applicationId);
+                if (applicationId != null) {
+                    return new CantaraApplicationAuthentication(applicationId, token);
+                }
+            }
+        } catch (Exception e) {
+            log.error("Exception in attempt to resolve authorization, bearerToken: " + authorizationHeader, e);
+        }
+        return null;
+    }
+
+    @Override
+    public AuthenticationResult authenticate(String authorizationHeader) {
+        String authorization = authorizationHeader;
+        if (authorization == null || authorization.isEmpty() || authorization.length() < 39) {
+            return new CantaraAuthenticationResult(null);
+        }
+        String token = authorization.substring("Bearer ".length());
+
+        if (token.contains("<applicationtoken>") || token.length() < 33) {
+            try {
+                ApplicationAuthentication applicationAuthentication = authenticateAsApplication(authorization);
+                return new CantaraAuthenticationResult(applicationAuthentication);
+            } catch (UnauthorizedException e) {
+                return new CantaraAuthenticationResult(null);
+            }
+        }
+
+        //Assume jwt or whydah token
+        try {
+            UserAuthentication userAuthentication = authenticateAsUser(authorization);
+            return new CantaraAuthenticationResult(userAuthentication);
+        } catch (UnauthorizedException e) {
+            return new CantaraAuthenticationResult(null);
+        }
+    }
+
+    @Override
+    public ApplicationTokenSession getApplicationTokenSession() {
+        return applicationTokenSession;
     }
 }
 

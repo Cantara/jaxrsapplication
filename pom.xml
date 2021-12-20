@@ -152,7 +152,6 @@
     </dependencyManagement>
 
     <repositories>
-        <!-- Needed for parent  -->
         <repository>
             <id>cantara-releases</id>
             <name>Cantara Release Repository</name>

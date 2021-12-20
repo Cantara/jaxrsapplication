@@ -27,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ResponseHelper {
 
+    // TODO configure with more support (jsr310, etc.) and/or allow client configuration
     private static final ObjectMapper mapper = new ObjectMapper();
 
     private final org.apache.http.client.fluent.Response response;

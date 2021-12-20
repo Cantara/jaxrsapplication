@@ -37,6 +37,7 @@ public final class TestClient {
 
     private static final Logger LOG = LoggerFactory.getLogger(TestClient.class);
 
+    // TODO configure with more support (jsr310, etc.) and/or allow client configuration
     private static final ObjectMapper mapper = new ObjectMapper();
 
     public static final int CONNECT_TIMEOUT_MS = 3000;
