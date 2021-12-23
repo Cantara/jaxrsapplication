@@ -550,47 +550,61 @@ public class DefaultAccessManager implements AccessManager {
         Objects.requireNonNull(authentication);
         if (authentication instanceof UserAuthentication) {
             UserAuthentication userAuthentication = (UserAuthentication) authentication;
-            return userHasAccess(userAuthentication.ssoId(), action);
+            return userHasAccess(userAuthentication.ssoId(), authentication.groups(), action);
         }
         if (authentication instanceof ApplicationAuthentication) {
             ApplicationAuthentication applicationAuthentication = (ApplicationAuthentication) authentication;
-            return applicationHasAccess(applicationAuthentication.ssoId(), action);
+            return applicationHasAccess(applicationAuthentication.ssoId(), authentication.groups(), action);
         }
         return false;
     }
 
     @Override
-    public boolean userHasAccess(String userId, String actionValue) {
+    public boolean userHasAccess(String userId, List<String> assignedGroups, String actionValue) {
         Objects.requireNonNull(userId);
         validateAction(actionValue);
         ConfiguredUserPermissions cup = configuredUserPermissionsByUserId.get(userId);
-        if (cup == null) {
-            // TODO get user-group assignment or user-tags from token or SSO api
-            cup = defaultUserPermissions;
+        Policy.Builder effectivePolicyBuilder = Policy.builder()
+                .policyId("effective-dynamic-policy-for-user-" + userId);
+        if (cup != null) {
+            effectivePolicyBuilder.aggregate(cup.getEffectivePolicy());
+        } else {
             log.trace("No configured permissions for user '{}', using user default permissions", userId);
+            effectivePolicyBuilder.aggregate(defaultUserPermissions.getEffectivePolicy());
         }
-        Action action = new Action(actionService, actionValue.trim());
-        Policy policy = cup.getEffectivePolicy();
+        if (assignedGroups != null && assignedGroups.size() > 0) {
+            effectivePolicyBuilder.aggregate(assignedGroups.stream()
+                    .map(groupById::get)
+                    .map(Group::getPolicy));
+        }
+        Policy policy = effectivePolicyBuilder.build();
         log.trace("Using effective user '{}' policy: {}", userId, policy.toJson());
+        Action action = new Action(actionService, actionValue.trim());
         PermissionDecision permissionDecision = policy.decidePermission(action);
         return permissionDecision.isAllowed();
     }
 
     @Override
-    public boolean applicationHasAccess(String applicationId, String actionValue) {
+    public boolean applicationHasAccess(String applicationId, List<String> assignedGroups, String actionValue) {
         Objects.requireNonNull(applicationId);
         validateAction(actionValue);
         ConfiguredApplicationPermissions cap = configuredApplicationPermissionsByApplicationId.get(applicationId);
-        if (cap == null) {
-            // TODO get application-group assignment or user-tags from token or SSO api
-            cap = defaultApplicationPermissions;
-            log.trace("No configured permissions for application '{}', using application default permissions", applicationId);
+        Policy.Builder effectivePolicyBuilder = Policy.builder()
+                .policyId("effective-dynamic-policy-for-application-" + applicationId);
+        if (cap != null) {
+            effectivePolicyBuilder.aggregate(cap.getEffectivePolicy());
         } else {
-            log.trace("Using permissions configured specifically for application '{}'", applicationId);
+            log.trace("No configured permissions for application '{}', using application default permissions", applicationId);
+            effectivePolicyBuilder.aggregate(defaultApplicationPermissions.getEffectivePolicy());
         }
-        Action action = new Action(actionService, actionValue.trim());
-        Policy policy = cap.getEffectivePolicy();
+        if (assignedGroups != null && assignedGroups.size() > 0) {
+            effectivePolicyBuilder.aggregate(assignedGroups.stream()
+                    .map(groupById::get)
+                    .map(Group::getPolicy));
+        }
+        Policy policy = effectivePolicyBuilder.build();
         log.trace("Using effective application '{}' policy: {}", applicationId, policy.toJson());
+        Action action = new Action(actionService, actionValue.trim());
         PermissionDecision permissionDecision = policy.decidePermission(action);
         return permissionDecision.isAllowed();
     }

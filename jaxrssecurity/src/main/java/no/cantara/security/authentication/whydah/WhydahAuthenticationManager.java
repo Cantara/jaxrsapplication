@@ -8,6 +8,7 @@ import net.whydah.sso.user.mappers.UserTokenMapper;
 import net.whydah.sso.user.types.UserApplicationRoleEntry;
 import net.whydah.sso.user.types.UserToken;
 import no.cantara.security.authentication.ApplicationAuthentication;
+import no.cantara.security.authentication.ApplicationTag;
 import no.cantara.security.authentication.ApplicationTokenSession;
 import no.cantara.security.authentication.AuthenticationManager;
 import no.cantara.security.authentication.AuthenticationResult;
@@ -21,6 +22,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -37,8 +39,10 @@ public class WhydahAuthenticationManager implements AuthenticationManager {
     private final String oauth2Uri;
     private final ApplicationTokenSession applicationTokenSession;
     private final WhydahService whydahService;
+    private final String whydahAuthGroupUserRoleName;
+    private final String whydahAuthGroupApplicationTagName;
 
-    public WhydahAuthenticationManager(Collection<String> roleNamesFilter, String oauth2Uri, ApplicationTokenSession applicationTokenSession, WhydahService whydahService) {
+    public WhydahAuthenticationManager(Collection<String> roleNamesFilter, String oauth2Uri, ApplicationTokenSession applicationTokenSession, WhydahService whydahService, String whydahAuthGroupUserRoleName, String whydahAuthGroupApplicationTagName) {
         this.roleNamesFilter = roleNamesFilter.stream()
                 .map(String::trim)
                 .map(String::toLowerCase)
@@ -46,6 +50,8 @@ public class WhydahAuthenticationManager implements AuthenticationManager {
         this.oauth2Uri = oauth2Uri;
         this.applicationTokenSession = applicationTokenSession;
         this.whydahService = whydahService;
+        this.whydahAuthGroupUserRoleName = whydahAuthGroupUserRoleName;
+        this.whydahAuthGroupApplicationTagName = whydahAuthGroupApplicationTagName;
     }
 
     @Override
@@ -149,7 +155,7 @@ public class WhydahAuthenticationManager implements AuthenticationManager {
         }
         log.debug("Successful user authentication");
 
-        return new CantaraUserAuthentication(ssoId, ssoId, usertokenid, customerRef, forwardingTokenGenerator, rolesGenerator);
+        return new CantaraUserAuthentication(ssoId, ssoId, usertokenid, customerRef, forwardingTokenGenerator, rolesGenerator, whydahAuthGroupUserRoleName);
     }
 
 
@@ -172,7 +178,10 @@ public class WhydahAuthenticationManager implements AuthenticationManager {
                     final String applicationId = whydahService.getApplicationIdFromApplicationTokenId(applicationTokenId);
                     log.trace("Lookup application by applicationTokenId {}. Id found {}", token, applicationId);
                     if (applicationId != null) {
-                        return new CantaraApplicationAuthentication(applicationId, applicationTokenId);
+                        return new CantaraApplicationAuthentication(applicationId, applicationTokenId, () -> {
+                            List<ApplicationTag> tags = whydahService.getApplicationTagsFromApplicationTokenId(applicationTokenId);
+                            return tags;
+                        }, whydahAuthGroupApplicationTagName);
                     }
                 } else {
                     log.warn("Invalid application-token XML sent as bearer token. This is not a supported authentication mechanism. Token: {}", token);
@@ -182,7 +191,10 @@ public class WhydahAuthenticationManager implements AuthenticationManager {
                 final String applicationId = whydahService.getApplicationIdFromApplicationTokenId(token);
                 log.trace("Lookup application by applicationTokenId {}. Id found {}", token, applicationId);
                 if (applicationId != null) {
-                    return new CantaraApplicationAuthentication(applicationId, token);
+                    return new CantaraApplicationAuthentication(applicationId, token, () -> {
+                        List<ApplicationTag> tags = whydahService.getApplicationTagsFromApplicationTokenId(token);
+                        return tags;
+                    }, whydahAuthGroupApplicationTagName);
                 }
             }
         } catch (Exception e) {

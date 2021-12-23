@@ -8,6 +8,12 @@ import java.util.List;
 
 public class WhydahAuthenticationManagerFactory implements AuthenticationManagerFactory {
 
+    public static final String WHYDAH_AUTH_GROUP_USER_ROLE_NAME = "whydah_auth_group_user_role_name";
+    public static final String WHYDAH_AUTH_GROUP_APPLICATION_TAG_NAME = "whydah_auth_group_user_role_name";
+
+    public static final String DEFAULT_AUTH_GROUP_APPLICATION_TAG_NAME = "access-groups";
+    public static final String DEFAULT_AUTH_GROUP_USER_ROLE_NAME = "access-groups";
+
     public WhydahAuthenticationManagerFactory() {
     }
 
@@ -29,6 +35,8 @@ public class WhydahAuthenticationManagerFactory implements AuthenticationManager
         List<String> roleNamesFilter = Arrays.asList(roleNames);
         JaxRsWhydahSession jaxRsWhydahSession = WhydahApplicationSessionConfigurator.from(applicationProperties);
         DefaultWhydahService whydahService = new DefaultWhydahService(jaxRsWhydahSession.getApplicationSession());
-        return new WhydahAuthenticationManager(roleNamesFilter, oauth2Uri, jaxRsWhydahSession, whydahService);
+        String whydahAuthGroupUserRoleName = applicationProperties.get(WHYDAH_AUTH_GROUP_USER_ROLE_NAME, DEFAULT_AUTH_GROUP_USER_ROLE_NAME);
+        String whydahAuthGroupApplicationTagName = applicationProperties.get(WHYDAH_AUTH_GROUP_APPLICATION_TAG_NAME, DEFAULT_AUTH_GROUP_APPLICATION_TAG_NAME);
+        return new WhydahAuthenticationManager(roleNamesFilter, oauth2Uri, jaxRsWhydahSession, whydahService, whydahAuthGroupUserRoleName, whydahAuthGroupApplicationTagName);
     }
 }

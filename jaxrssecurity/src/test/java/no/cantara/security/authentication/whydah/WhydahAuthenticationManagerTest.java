@@ -2,9 +2,12 @@ package no.cantara.security.authentication.whydah;
 
 import edu.emory.mathcs.backport.java.util.Collections;
 import net.whydah.sso.user.types.UserToken;
+import no.cantara.security.authentication.ApplicationTag;
 import no.cantara.security.authentication.AuthenticationManager;
 import no.cantara.security.authentication.AuthenticationResult;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -24,7 +27,7 @@ public class WhydahAuthenticationManagerTest {
     @Test
     public void thatAppTokenXmlIsRecognizedAsApplication() {
         AuthenticationManager authenticationManager = new WhydahAuthenticationManager(
-                Collections.emptyList(), "", () -> "", new TestWhydahService()
+                Collections.emptyList(), "", () -> "", new TestWhydahService(), WhydahAuthenticationManagerFactory.DEFAULT_AUTH_GROUP_USER_ROLE_NAME, WhydahAuthenticationManagerFactory.DEFAULT_AUTH_GROUP_APPLICATION_TAG_NAME
         );
         AuthenticationResult authenticationResult = authenticationManager.authenticate("Bearer " + appTokenXml);
         assertTrue(authenticationResult.isValid());
@@ -48,6 +51,11 @@ public class WhydahAuthenticationManagerTest {
             if ("2c14bf76cc4a78078bf216a815ed5cd1".equals(applicationTokenId)) {
                 return "testapp";
             }
+            return null;
+        }
+
+        @Override
+        public List<ApplicationTag> getApplicationTagsFromApplicationTokenId(String applicationTokenId) {
             return null;
         }
 

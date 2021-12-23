@@ -19,7 +19,7 @@ public class RandomizerTest {
 
     @Test
     public void thatViewerCanDoAllExceptReseed() {
-        testClient.useFakeApplicationAuth("junit-viewer");
+        testClient.useFakeApplicationAuth().applicationId("junit-viewer").addAccessGroup("viewers").endFakeApplication();
         log.info("GET /randomizer/str/10 Response: {}", testClient.get().path("/randomizer/str/10").execute().expect200Ok().contentAsString());
         log.info("GET /randomizer/int/1000 Response: {}", testClient.get().path("/randomizer/int/1000").execute().expect200Ok().contentAsString());
         log.info("GET /randomizer/health Response: {}", testClient.get().path("/randomizer/health").execute().expect200Ok().contentAsType(JsonNode.class).toPrettyString());
@@ -28,7 +28,7 @@ public class RandomizerTest {
 
     @Test
     public void thatAdminCanDoAll() {
-        testClient.useFakeApplicationAuth("junit-admin");
+        testClient.useFakeApplicationAuth().applicationId("junit-admin").addAccessGroup("admins").endFakeApplication();
         log.info("GET /randomizer/str/10 Response: {}", testClient.get().path("/randomizer/str/10").execute().expect200Ok().contentAsString());
         log.info("GET /randomizer/int/1000 Response: {}", testClient.get().path("/randomizer/int/1000").execute().expect200Ok().contentAsString());
         log.info("GET /randomizer/health Response: {}", testClient.get().path("/randomizer/health").execute().expect200Ok().contentAsType(JsonNode.class).toPrettyString());
