@@ -9,7 +9,7 @@ import java.util.List;
 public class WhydahAuthenticationManagerFactory implements AuthenticationManagerFactory {
 
     public static final String WHYDAH_AUTH_GROUP_USER_ROLE_NAME = "whydah_auth_group_user_role_name";
-    public static final String WHYDAH_AUTH_GROUP_APPLICATION_TAG_NAME = "whydah_auth_group_user_role_name";
+    public static final String WHYDAH_AUTH_GROUP_APPLICATION_TAG_NAME = "whydah_auth_group_application_tag_name";
 
     public static final String DEFAULT_AUTH_GROUP_APPLICATION_TAG_NAME = "access-groups";
     public static final String DEFAULT_AUTH_GROUP_USER_ROLE_NAME = "access-groups";
