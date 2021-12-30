@@ -19,7 +19,7 @@
         <metrics.version>4.2.7</metrics.version>
         <jersey.version>3.0.3</jersey.version>
         <jetty.version>11.0.6</jetty.version>
-        <swagger.version>2.1.11</swagger.version>
+        <swagger.version>2.1.12</swagger.version>
     </properties>
 
     <dependencyManagement>
