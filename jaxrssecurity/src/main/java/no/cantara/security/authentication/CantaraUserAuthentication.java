@@ -17,16 +17,16 @@ public class CantaraUserAuthentication implements UserAuthentication {
     private final Supplier<String> forwardingTokenGenerator;
     private final Supplier<Map<String, String>> rolesSupplier;
     private final AtomicReference<Map<String, String>> rolesRef = new AtomicReference<>();
-    private final String accessGroupRoleName;
+    private final String accessGroupRoleNameFix;
 
-    public CantaraUserAuthentication(String userId, String username, String usertokenId, String customerRefId, Supplier<String> forwardingTokenGenerator, Supplier<Map<String, String>> rolesSupplier, String accessGroupRoleName) {
+    public CantaraUserAuthentication(String userId, String username, String usertokenId, String customerRefId, Supplier<String> forwardingTokenGenerator, Supplier<Map<String, String>> rolesSupplier, String accessGroupRoleNameFix) {
         this.userId = userId;
         this.username = username;
         this.usertokenId = usertokenId;
         this.customerRefId = customerRefId;
         this.forwardingTokenGenerator = forwardingTokenGenerator;
         this.rolesSupplier = rolesSupplier;
-        this.accessGroupRoleName = accessGroupRoleName;
+        this.accessGroupRoleNameFix = accessGroupRoleNameFix;
     }
 
     @Override
@@ -69,11 +69,17 @@ public class CantaraUserAuthentication implements UserAuthentication {
     @Override
     public List<String> groups() {
         List<String> groups = new ArrayList<>();
-        String entraosGroups = roles().get(accessGroupRoleName);
-        if (entraosGroups != null) {
-            String[] parts = entraosGroups.split("[ ,;:]+");
-            for (String part : parts) {
-                groups.add(part.trim());
+        for (Map.Entry<String, String> entry : roles().entrySet()) {
+            String roleName = entry.getKey();
+            if (roleName.toLowerCase().startsWith(accessGroupRoleNameFix.toLowerCase())
+                    || roleName.toLowerCase().endsWith(accessGroupRoleNameFix.toLowerCase())) {
+                String accessGroups = entry.getValue();
+                if (accessGroups != null) {
+                    String[] parts = accessGroups.split("[ ,;:]+");
+                    for (String part : parts) {
+                        groups.add(part.trim());
+                    }
+                }
             }
         }
         return groups;

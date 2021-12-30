@@ -40,7 +40,7 @@ public class FakeAuthenticationManager implements AuthenticationManager {
         fakeUser = new CantaraUserAuthentication(defaultFakeUserId, defaultFakeUsername, defaultFakeUsertokenId, defaultFakeCustomerRef, () -> String.format("fake-sso-id: %s, fake-customer-ref: %s", defaultFakeUserId, defaultFakeCustomerRef), () -> {
             Map<String, String> roles = new LinkedHashMap<>();
             return roles;
-        }, WhydahAuthenticationManagerFactory.DEFAULT_AUTH_GROUP_USER_ROLE_NAME);
+        }, WhydahAuthenticationManagerFactory.DEFAULT_AUTH_GROUP_USER_ROLE_NAME_FIX);
         fakeApplication = new CantaraApplicationAuthentication(defaultFakeApplicationId, String.format("fake-application-id: %s", defaultFakeApplicationId), Collections::emptyList, WhydahAuthenticationManagerFactory.DEFAULT_AUTH_GROUP_APPLICATION_TAG_NAME);
     }
 
@@ -88,7 +88,7 @@ public class FakeAuthenticationManager implements AuthenticationManager {
             }
             return roleValueByName;
         };
-        return new CantaraUserAuthentication(ssoId, username, usertokenId, customerRef, forwardingTokenGenerator, rolesSupplier, WhydahAuthenticationManagerFactory.DEFAULT_AUTH_GROUP_USER_ROLE_NAME);
+        return new CantaraUserAuthentication(ssoId, username, usertokenId, customerRef, forwardingTokenGenerator, rolesSupplier, WhydahAuthenticationManagerFactory.DEFAULT_AUTH_GROUP_USER_ROLE_NAME_FIX);
     }
 
     @Override

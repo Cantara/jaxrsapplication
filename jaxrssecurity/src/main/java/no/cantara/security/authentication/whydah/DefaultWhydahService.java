@@ -10,7 +10,7 @@ import net.whydah.sso.commands.userauth.CommandGetUserTokenByUserTicket;
 import net.whydah.sso.commands.userauth.CommandGetUserTokenByUserTokenId;
 import net.whydah.sso.commands.userauth.CommandRefreshUserToken;
 import net.whydah.sso.commands.userauth.CommandValidateUserTokenId;
-import net.whydah.sso.session.WhydahApplicationSession;
+import net.whydah.sso.session.WhydahApplicationSession2;
 import net.whydah.sso.user.mappers.UserTokenMapper;
 import net.whydah.sso.user.types.UserToken;
 import no.cantara.security.authentication.ApplicationTag;
@@ -28,13 +28,13 @@ public class DefaultWhydahService implements WhydahService {
 
     private static final ObjectMapper mapper = new ObjectMapper();
 
-    private final WhydahApplicationSession was;
+    private final WhydahApplicationSession2 was;
 
-    public DefaultWhydahService(WhydahApplicationSession was) {
+    public DefaultWhydahService(WhydahApplicationSession2 was) {
         this.was = was;
     }
 
-    public WhydahApplicationSession getWas() {
+    public WhydahApplicationSession2 getWas() {
         return was;
     }
 

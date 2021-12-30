@@ -567,12 +567,14 @@ public class DefaultAccessManager implements AccessManager {
         Policy.Builder effectivePolicyBuilder = Policy.builder()
                 .policyId("effective-dynamic-policy-for-user-" + userId);
         if (cup != null) {
+            log.trace("Adding pre-configured permissions to user '{}'", userId);
             effectivePolicyBuilder.aggregate(cup.getEffectivePolicy());
         } else {
-            log.trace("No configured permissions for user '{}', using user default permissions", userId);
+            log.trace("Adding default permissions to user '{}'", userId);
             effectivePolicyBuilder.aggregate(defaultUserPermissions.getEffectivePolicy());
         }
         if (assignedGroups != null && assignedGroups.size() > 0) {
+            log.trace("Adding authenticated access-groups to user '{}': {}", userId, String.join(",", assignedGroups));
             effectivePolicyBuilder.aggregate(assignedGroups.stream()
                     .map(groupById::get)
                     .map(Group::getPolicy));
@@ -592,12 +594,14 @@ public class DefaultAccessManager implements AccessManager {
         Policy.Builder effectivePolicyBuilder = Policy.builder()
                 .policyId("effective-dynamic-policy-for-application-" + applicationId);
         if (cap != null) {
+            log.trace("Adding pre-configured permissions to application '{}'", applicationId);
             effectivePolicyBuilder.aggregate(cap.getEffectivePolicy());
         } else {
-            log.trace("No configured permissions for application '{}', using application default permissions", applicationId);
+            log.trace("Adding default permissions to application '{}'", applicationId);
             effectivePolicyBuilder.aggregate(defaultApplicationPermissions.getEffectivePolicy());
         }
         if (assignedGroups != null && assignedGroups.size() > 0) {
+            log.trace("Adding authenticated access-groups to application '{}': {}", applicationId, String.join(",", assignedGroups));
             effectivePolicyBuilder.aggregate(assignedGroups.stream()
                     .map(groupById::get)
                     .map(Group::getPolicy));

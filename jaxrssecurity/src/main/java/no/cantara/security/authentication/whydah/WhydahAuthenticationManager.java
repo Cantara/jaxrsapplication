@@ -20,11 +20,9 @@ import no.cantara.security.authentication.UserAuthentication;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -35,23 +33,30 @@ public class WhydahAuthenticationManager implements AuthenticationManager {
     private static final Logger log = LoggerFactory.getLogger(WhydahAuthenticationManager.class);
     private static Pattern appTokenIdPattern = Pattern.compile("<applicationtokenID>([^<]*)</applicationtokenID>");
 
-    private final Set<String> roleNamesFilter;
     private final String oauth2Uri;
     private final ApplicationTokenSession applicationTokenSession;
     private final WhydahService whydahService;
-    private final String whydahAuthGroupUserRoleName;
+    private final String whydahAuthGroupUserRoleNameFix;
     private final String whydahAuthGroupApplicationTagName;
 
-    public WhydahAuthenticationManager(Collection<String> roleNamesFilter, String oauth2Uri, ApplicationTokenSession applicationTokenSession, WhydahService whydahService, String whydahAuthGroupUserRoleName, String whydahAuthGroupApplicationTagName) {
-        this.roleNamesFilter = roleNamesFilter.stream()
-                .map(String::trim)
-                .map(String::toLowerCase)
-                .collect(Collectors.toSet());
+    public WhydahAuthenticationManager(String oauth2Uri, ApplicationTokenSession applicationTokenSession, WhydahService whydahService, String whydahAuthGroupUserRoleNameFix, String whydahAuthGroupApplicationTagName) {
         this.oauth2Uri = oauth2Uri;
         this.applicationTokenSession = applicationTokenSession;
         this.whydahService = whydahService;
-        this.whydahAuthGroupUserRoleName = whydahAuthGroupUserRoleName;
+        this.whydahAuthGroupUserRoleNameFix = whydahAuthGroupUserRoleNameFix;
         this.whydahAuthGroupApplicationTagName = whydahAuthGroupApplicationTagName;
+    }
+
+    public WhydahService getWhydahService() {
+        return whydahService;
+    }
+
+    public String getWhydahAuthGroupUserRoleNameFix() {
+        return whydahAuthGroupUserRoleNameFix;
+    }
+
+    public String getWhydahAuthGroupApplicationTagName() {
+        return whydahAuthGroupApplicationTagName;
     }
 
     @Override
@@ -91,8 +96,8 @@ public class WhydahAuthenticationManager implements AuthenticationManager {
                     if (userToken == null) {
                         return Collections.emptyMap();
                     }
-                    Map<String, String> roleValueByName = userToken.getRoleList().stream()
-                            .filter(re -> roleNamesFilter.contains(re.getRoleName().toLowerCase()))
+                    Map<String, String> roleValueByName = userToken.getRoleList()
+                            .stream()
                             .collect(Collectors.toMap(UserApplicationRoleEntry::getRoleName, UserApplicationRoleEntry::getRoleValue));
                     return roleValueByName;
                 };
@@ -122,8 +127,8 @@ public class WhydahAuthenticationManager implements AuthenticationManager {
                         return forwardingUserTicket;
                     };
                     rolesGenerator = () -> {
-                        Map<String, String> roleValueByName = userToken.getRoleList().stream()
-                                .filter(re -> roleNamesFilter.contains(re.getRoleName().toLowerCase()))
+                        Map<String, String> roleValueByName = userToken.getRoleList()
+                                .stream()
                                 .collect(Collectors.toMap(UserApplicationRoleEntry::getRoleName, UserApplicationRoleEntry::getRoleValue));
                         return roleValueByName;
                     };
@@ -149,13 +154,21 @@ public class WhydahAuthenticationManager implements AuthenticationManager {
 
         boolean okUserSession = whydahService.validateUserTokenId(usertokenid);
 
-        if (ssoId == null || ssoId.isEmpty() || customerRef == null || customerRef.isEmpty() || !okUserSession) {
-            log.debug("Unsucessful resolving of authentication. ssoid {}, customerRef {}, usersession {} ", ssoId, customerRef, okUserSession);
+        if (ssoId == null || ssoId.isEmpty()) {
+            log.debug("Unsucessful resolving of user-authentication, ssoId is null or empty. ssoid '{}'", ssoId);
+            throw new UnauthorizedException();
+        }
+        if (customerRef == null || customerRef.isEmpty()) {
+            log.debug("Unsucessful resolving of user-authentication, customerRef is null or empty. customerRef {}", customerRef);
+            throw new UnauthorizedException();
+        }
+        if (!okUserSession) {
+            log.debug("Unsucessful resolving of user-authentication, okUserSession false.");
             throw new UnauthorizedException();
         }
         log.debug("Successful user authentication");
 
-        return new CantaraUserAuthentication(ssoId, ssoId, usertokenid, customerRef, forwardingTokenGenerator, rolesGenerator, whydahAuthGroupUserRoleName);
+        return new CantaraUserAuthentication(ssoId, ssoId, usertokenid, customerRef, forwardingTokenGenerator, rolesGenerator, whydahAuthGroupUserRoleNameFix);
     }
 
 

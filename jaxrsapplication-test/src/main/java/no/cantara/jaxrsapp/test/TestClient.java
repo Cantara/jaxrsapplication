@@ -527,7 +527,7 @@ public final class TestClient {
             }
             if (authGroups.size() > 0) {
                 String accessGroups = String.join(" ", authGroups);
-                roles.put(WhydahAuthenticationManagerFactory.DEFAULT_AUTH_GROUP_USER_ROLE_NAME, accessGroups);
+                roles.put(WhydahAuthenticationManagerFactory.DEFAULT_AUTH_GROUP_USER_ROLE_NAME_FIX, accessGroups);
             }
             final StringBuilder sb = new StringBuilder();
             sb.append("Bearer ");
