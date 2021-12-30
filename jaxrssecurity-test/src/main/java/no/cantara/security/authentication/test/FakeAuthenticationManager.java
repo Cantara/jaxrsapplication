@@ -1,6 +1,9 @@
 package no.cantara.security.authentication.test;
 
+import net.whydah.sso.application.mappers.ApplicationTagMapper;
+import net.whydah.sso.application.types.Tag;
 import no.cantara.security.authentication.ApplicationAuthentication;
+import no.cantara.security.authentication.ApplicationTag;
 import no.cantara.security.authentication.ApplicationTokenSession;
 import no.cantara.security.authentication.AuthenticationManager;
 import no.cantara.security.authentication.AuthenticationResult;
@@ -9,19 +12,24 @@ import no.cantara.security.authentication.CantaraAuthenticationResult;
 import no.cantara.security.authentication.CantaraUserAuthentication;
 import no.cantara.security.authentication.UnauthorizedException;
 import no.cantara.security.authentication.UserAuthentication;
+import no.cantara.security.authentication.whydah.WhydahAuthenticationManagerFactory;
 
+import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class FakeAuthenticationManager implements AuthenticationManager {
 
     public static final String BEARER_TOKEN_UNAUTHORIZED = "Bearer unauthorized";
 
     static final Pattern fakeUserTokenPattern = Pattern.compile("Bearer\\s+fake-sso-id:\\s*(?<ssoid>[^,]*),\\s*(?:fake-username:\\s*(?<username>[^,]*),)?\\s*(?:fake-usertoken-id:\\s*(?<usertokenid>[^,]*),)?\\s*fake-customer-ref:\\s*(?<customerref>[^,]*)(?:,\\s*fake-roles:\\s*(?<roles>.*))?");
-    static final Pattern fakeApplicationTokenPattern = Pattern.compile("Bearer\\s+fake-application-id:\\s*(?<applicationid>.*)");
+    static final Pattern fakeApplicationTokenPattern = Pattern.compile("Bearer\\s+fake-application-id:\\s*(?<applicationid>[^,]*)(?:,\\s*fake-tags:\\s*(?<tags>.*))?");
 
     private final FakeApplicationTokenSession fakeApplicationTokenSession;
     private final UserAuthentication fakeUser;
@@ -32,8 +40,8 @@ public class FakeAuthenticationManager implements AuthenticationManager {
         fakeUser = new CantaraUserAuthentication(defaultFakeUserId, defaultFakeUsername, defaultFakeUsertokenId, defaultFakeCustomerRef, () -> String.format("fake-sso-id: %s, fake-customer-ref: %s", defaultFakeUserId, defaultFakeCustomerRef), () -> {
             Map<String, String> roles = new LinkedHashMap<>();
             return roles;
-        });
-        fakeApplication = new CantaraApplicationAuthentication(defaultFakeApplicationId, String.format("fake-application-id: %s", defaultFakeApplicationId));
+        }, WhydahAuthenticationManagerFactory.DEFAULT_AUTH_GROUP_USER_ROLE_NAME_FIX);
+        fakeApplication = new CantaraApplicationAuthentication(defaultFakeApplicationId, String.format("fake-application-id: %s", defaultFakeApplicationId), Collections::emptyList, WhydahAuthenticationManagerFactory.DEFAULT_AUTH_GROUP_APPLICATION_TAG_NAME);
     }
 
     @Override
@@ -67,9 +75,10 @@ public class FakeAuthenticationManager implements AuthenticationManager {
         String theUsertokenId = usertokenId;
         String customerRef = m.group("customerref");
         String fakeRoles = m.group("roles");
-        return new CantaraUserAuthentication(ssoId, username, usertokenId, customerRef, () -> {
+        Supplier<String> forwardingTokenGenerator = () -> {
             return String.format("fake-sso-id: %s, fake-username: %s, fake-usertoken-id: %s, fake-customer-ref: %s, fake-roles: %s", ssoId, theUsername, theUsertokenId, customerRef, fakeRoles != null ? fakeRoles : "");
-        }, () -> {
+        };
+        Supplier<Map<String, String>> rolesSupplier = () -> {
             Map<String, String> roleValueByName = new LinkedHashMap<>();
             for (String keyValuePair : fakeRoles.split(",")) {
                 String[] keyAndValue = keyValuePair.split("=");
@@ -78,7 +87,8 @@ public class FakeAuthenticationManager implements AuthenticationManager {
                 }
             }
             return roleValueByName;
-        });
+        };
+        return new CantaraUserAuthentication(ssoId, username, usertokenId, customerRef, forwardingTokenGenerator, rolesSupplier, WhydahAuthenticationManagerFactory.DEFAULT_AUTH_GROUP_USER_ROLE_NAME_FIX);
     }
 
     @Override
@@ -100,7 +110,10 @@ public class FakeAuthenticationManager implements AuthenticationManager {
 
     private CantaraApplicationAuthentication createApplicationFromMatch(Matcher m) {
         String applicationid = m.group("applicationid");
-        return new CantaraApplicationAuthentication(applicationid, String.format("fake-application-id: %s", applicationid));
+        String tags = m.group("tags");
+        List<Tag> whydahTagList = ApplicationTagMapper.getTagList(tags);
+        List<ApplicationTag> tagList = whydahTagList.stream().map(tag -> new ApplicationTag(tag.getName(), tag.getValue())).collect(Collectors.toList());
+        return new CantaraApplicationAuthentication(applicationid, String.format("fake-application-id: %s", applicationid), () -> tagList, WhydahAuthenticationManagerFactory.DEFAULT_AUTH_GROUP_APPLICATION_TAG_NAME);
     }
 
     @Override

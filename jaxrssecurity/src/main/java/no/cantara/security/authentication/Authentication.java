@@ -1,6 +1,7 @@
 package no.cantara.security.authentication;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 public interface Authentication {
@@ -10,6 +11,8 @@ public interface Authentication {
     Instant expires();
 
     String forwardingToken();
+
+    List<String> groups();
 
     default boolean isApplication() {
         return false;

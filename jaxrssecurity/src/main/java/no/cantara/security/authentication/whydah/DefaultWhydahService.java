@@ -1,5 +1,8 @@
 package no.cantara.security.authentication.whydah;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import net.whydah.sso.application.mappers.ApplicationCredentialMapper;
 import net.whydah.sso.commands.appauth.CommandGetApplicationIdFromApplicationTokenId;
 import net.whydah.sso.commands.userauth.CommandCreateTicketForUserTokenID;
@@ -7,26 +10,31 @@ import net.whydah.sso.commands.userauth.CommandGetUserTokenByUserTicket;
 import net.whydah.sso.commands.userauth.CommandGetUserTokenByUserTokenId;
 import net.whydah.sso.commands.userauth.CommandRefreshUserToken;
 import net.whydah.sso.commands.userauth.CommandValidateUserTokenId;
-import net.whydah.sso.session.WhydahApplicationSession;
+import net.whydah.sso.session.WhydahApplicationSession2;
 import net.whydah.sso.user.mappers.UserTokenMapper;
 import net.whydah.sso.user.types.UserToken;
+import no.cantara.security.authentication.ApplicationTag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.URI;
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 
 public class DefaultWhydahService implements WhydahService {
 
     public static final Logger log = LoggerFactory.getLogger(DefaultWhydahService.class);
 
-    private final WhydahApplicationSession was;
+    private static final ObjectMapper mapper = new ObjectMapper();
 
-    public DefaultWhydahService(WhydahApplicationSession was) {
+    private final WhydahApplicationSession2 was;
+
+    public DefaultWhydahService(WhydahApplicationSession2 was) {
         this.was = was;
     }
 
-    public WhydahApplicationSession getWas() {
+    public WhydahApplicationSession2 getWas() {
         return was;
     }
 
@@ -73,6 +81,21 @@ public class DefaultWhydahService implements WhydahService {
                 URI.create(was.getSTS()),
                 applicationTokenId).execute();
         return applicationId;
+    }
+
+    @Override
+    public List<ApplicationTag> getApplicationTagsFromApplicationTokenId(String applicationTokenId) {
+        final String tagsJson = new CommandGetApplicationTagsFromApplicationTokenId(
+                URI.create(was.getSTS()),
+                applicationTokenId).execute();
+        try {
+            List<ApplicationTag> tags = mapper.readValue(tagsJson, new TypeReference<List<ApplicationTag>>() {
+            });
+            return tags;
+        } catch (JsonProcessingException e) {
+            log.error("", e);
+            return Collections.emptyList();
+        }
     }
 
     @Override

@@ -2,6 +2,9 @@ package no.cantara.jaxrsapp.test;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import net.whydah.sso.application.mappers.ApplicationTagMapper;
+import net.whydah.sso.application.types.Tag;
+import no.cantara.security.authentication.whydah.WhydahAuthenticationManagerFactory;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHeaders;
 import org.apache.http.NameValuePair;
@@ -37,6 +40,7 @@ public final class TestClient {
 
     private static final Logger LOG = LoggerFactory.getLogger(TestClient.class);
 
+    // TODO configure with more support (jsr310, etc.) and/or allow client configuration
     private static final ObjectMapper mapper = new ObjectMapper();
 
     public static final int CONNECT_TIMEOUT_MS = 3000;
@@ -439,14 +443,39 @@ public final class TestClient {
 
     public class FakeApplicationAuthorizationBuilder {
         private String applicationId;
+        private List<Tag> tags = new LinkedList<>();
+        private List<String> authGroups = new LinkedList<>();
 
         public FakeApplicationAuthorizationBuilder applicationId(String applicationId) {
             this.applicationId = applicationId;
             return this;
         }
 
+        public FakeApplicationAuthorizationBuilder addTag(String tagName, String tagValue) {
+            tags.add(new Tag(tagName, tagValue));
+            return this;
+        }
+
+        public FakeApplicationAuthorizationBuilder addTag(String tagValue) {
+            tags.add(new Tag(Tag.DEFAULTNAME, tagValue));
+            return this;
+        }
+
+        public FakeApplicationAuthorizationBuilder addAccessGroup(String group) {
+            authGroups.add(group);
+            return this;
+        }
+
         public TestClient endFakeApplication() {
-            useAuthorization("Bearer fake-application-id: " + applicationId);
+            if (authGroups.size() > 0) {
+                String accessGroups = String.join(" ", authGroups);
+                tags.add(new Tag(WhydahAuthenticationManagerFactory.DEFAULT_AUTH_GROUP_APPLICATION_TAG_NAME, accessGroups));
+            }
+            StringBuilder sb = new StringBuilder("Bearer fake-application-id: ").append(applicationId);
+            if (tags.size() > 0) {
+                sb.append(", fake-tags: ").append(ApplicationTagMapper.toApplicationTagString(tags));
+            }
+            useAuthorization(sb.toString());
             return TestClient.this;
         }
     }
@@ -457,6 +486,7 @@ public final class TestClient {
         private String usertokenId;
         private String customerRef;
         private final Map<String, String> roles = new LinkedHashMap<>();
+        private final List<String> authGroups = new LinkedList<>();
 
         public FakeUserAuthorizationBuilder userId(String userId) {
             this.userId = userId;
@@ -483,12 +513,21 @@ public final class TestClient {
             return this;
         }
 
+        public FakeUserAuthorizationBuilder addAccessGroup(String group) {
+            this.authGroups.add(group);
+            return this;
+        }
+
         public TestClient endFakeUser() {
             if (userId == null) {
                 throw new IllegalArgumentException("userId cannot be null");
             }
             if (customerRef == null) {
                 throw new IllegalArgumentException("customerRef cannot be null");
+            }
+            if (authGroups.size() > 0) {
+                String accessGroups = String.join(" ", authGroups);
+                roles.put(WhydahAuthenticationManagerFactory.DEFAULT_AUTH_GROUP_USER_ROLE_NAME_FIX, accessGroups);
             }
             final StringBuilder sb = new StringBuilder();
             sb.append("Bearer ");
