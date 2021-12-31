@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.inject.Inject;
 import no.cantara.jaxrsapp.JaxRsServletApplication;
+import no.cantara.jaxrsapp.Logging;
 import no.cantara.jaxrsapp.test.BeforeInitLifecycleListener;
 import no.cantara.jaxrsapp.test.IntegrationTestExtension;
 import no.cantara.jaxrsapp.test.TestClient;
@@ -25,6 +26,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ExtendWith(IntegrationTestExtension.class)
 public class GreetingTest implements BeforeInitLifecycleListener {
+
+    static {
+        Logging.init();
+    }
 
     private static final Logger log = LoggerFactory.getLogger(GreetingTest.class);
 

@@ -2,6 +2,7 @@ package no.cantara.jaxrsapp.sample.randomizer;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.inject.Inject;
+import no.cantara.jaxrsapp.Logging;
 import no.cantara.jaxrsapp.test.IntegrationTestExtension;
 import no.cantara.jaxrsapp.test.TestClient;
 import org.junit.jupiter.api.Test;
@@ -11,6 +12,10 @@ import org.slf4j.LoggerFactory;
 
 @ExtendWith(IntegrationTestExtension.class)
 public class RandomizerTest {
+
+    static {
+        Logging.init();
+    }
 
     private static final Logger log = LoggerFactory.getLogger(RandomizerTest.class);
 

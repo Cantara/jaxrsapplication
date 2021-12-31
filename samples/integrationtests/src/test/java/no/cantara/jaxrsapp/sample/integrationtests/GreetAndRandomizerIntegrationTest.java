@@ -5,6 +5,7 @@ import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import no.cantara.jaxrsapp.JaxRsRegistry;
 import no.cantara.jaxrsapp.JaxRsServletApplication;
+import no.cantara.jaxrsapp.Logging;
 import no.cantara.jaxrsapp.sample.greeter.DefaultGreetingCandidateRepository;
 import no.cantara.jaxrsapp.sample.greeter.Greeting;
 import no.cantara.jaxrsapp.sample.greeter.GreetingCandidateRepository;
@@ -42,6 +43,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         "server.port", "0"
 })
 public class GreetAndRandomizerIntegrationTest implements BeforeInitLifecycleListener {
+
+    static {
+        Logging.init();
+    }
 
     private static final Logger log = LoggerFactory.getLogger(GreetAndRandomizerIntegrationTest.class);
 

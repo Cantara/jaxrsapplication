@@ -50,7 +50,6 @@ public class GreetingResource {
     }
 
     @POST
-    @Path("/")
     @Consumes(MediaType.APPLICATION_JSON)
     @SecureAction("addGreetingCandidate")
     @Timed
