@@ -88,6 +88,9 @@ public class DefaultWhydahService implements WhydahService {
         final String tagsJson = new CommandGetApplicationTagsFromApplicationTokenId(
                 URI.create(was.getSTS()),
                 applicationTokenId).execute();
+        if (tagsJson == null || tagsJson.trim().isEmpty()) {
+            return Collections.emptyList();
+        }
         try {
             List<ApplicationTag> tags = mapper.readValue(tagsJson, new TypeReference<List<ApplicationTag>>() {
             });
