@@ -9,9 +9,21 @@ public class WhydahApplicationSessionConfigurator {
 
     public static JaxRsWhydahSession from(ApplicationProperties properties) {
         String configuredWhydahBaseUri = properties.get(WhydahSecurityProperties.WHYDAH_URI);
+        String configuredWhydahStsUri = properties.get("whydah_uri_sts");
+        String configuredWhydahUasUri = properties.get("whydah_uri_uas");
         String normalizedWhydahBaseUri = normalizeBaseUri(configuredWhydahBaseUri);
-        String securityTokenServiceUri = normalizedWhydahBaseUri + "tokenservice/";
-        String userAdminServiceUri = normalizedWhydahBaseUri + "useradminservice/";
+        String securityTokenServiceUri;
+        if (configuredWhydahStsUri != null) {
+            securityTokenServiceUri = normalizeBaseUri(configuredWhydahStsUri);
+        } else {
+            securityTokenServiceUri = normalizedWhydahBaseUri + "tokenservice/";
+        }
+        String userAdminServiceUri;
+        if (configuredWhydahUasUri != null) {
+            userAdminServiceUri = normalizeBaseUri(configuredWhydahUasUri);
+        } else {
+            userAdminServiceUri = normalizedWhydahBaseUri + "useradminservice/";
+        }
         String applicationId = properties.get(WhydahSecurityProperties.WHYDAH_APPLICATION_ID);
         String applicationName = properties.get(WhydahSecurityProperties.WHYDAH_APPLICATION_NAME);
         String applicationSecret = properties.get(WhydahSecurityProperties.WHYDAH_APPLICATION_SECRET);
