@@ -86,6 +86,8 @@ class FakeAuthenticationManagerTest {
             assertTrue(UserAuthentication.class.isAssignableFrom(authentication.getClass()));
             assertEquals("389ugieoi", authentication.ssoId());
             assertEquals("i3ognlf", ((UserAuthentication) authentication).customerRef());
+            assertEquals(0, ((UserAuthentication) authentication).roles().size());
+            assertEquals(0, authentication.groups().size());
         }
         {
             Authentication authentication = manager.authenticate("Bearer fake-application-id: h4578guienakl").authentication();

@@ -79,6 +79,9 @@ public class FakeAuthenticationManager implements AuthenticationManager {
             return String.format("fake-sso-id: %s, fake-username: %s, fake-usertoken-id: %s, fake-customer-ref: %s, fake-roles: %s", ssoId, theUsername, theUsertokenId, customerRef, fakeRoles != null ? fakeRoles : "");
         };
         Supplier<Map<String, String>> rolesSupplier = () -> {
+            if (fakeRoles == null || fakeRoles.trim().isEmpty()) {
+                return Collections.emptyMap();
+            }
             Map<String, String> roleValueByName = new LinkedHashMap<>();
             for (String keyValuePair : fakeRoles.split(",")) {
                 String[] keyAndValue = keyValuePair.split("=");
