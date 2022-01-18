@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -47,16 +46,18 @@ public class DefaultTestClient implements TestClient {
     public static final int SOCKET_TIMEOUT_MS = 10000;
 
     private final Map<String, String> defaultHeaderByKey = new ConcurrentHashMap<>();
+    private final String scheme;
     private final String host;
     private final int port;
 
-    private DefaultTestClient(String host, int port) {
+    private DefaultTestClient(String scheme, String host, int port) {
+        this.scheme = scheme;
         this.host = host;
         this.port = port;
     }
 
-    public static DefaultTestClient newClient(String host, int port) {
-        return new DefaultTestClient(host, port);
+    public static DefaultTestClient newClient(String scheme, String host, int port) {
+        return new DefaultTestClient(scheme, host, port);
     }
 
     @Override
@@ -91,12 +92,12 @@ public class DefaultTestClient implements TestClient {
         return port;
     }
 
-    URI toUri(String uri) {
-        try {
-            return new URI("http://" + host + ":" + port + uri);
-        } catch (URISyntaxException e) {
-            throw new RuntimeException(e);
-        }
+    public URI getBaseURI() {
+        return URI.create(scheme + "://" + host + ":" + port);
+    }
+
+    URI toUri(String pathAndQuery) {
+        return URI.create(scheme + "://" + host + ":" + port + pathAndQuery);
     }
 
     public DefaultRequestBuilder get() {

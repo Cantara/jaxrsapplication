@@ -1,5 +1,6 @@
 package no.cantara.jaxrsapp.test;
 
+import java.net.URI;
 import java.util.Collection;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -56,6 +57,10 @@ public class RoundRobinTestClient implements TestClient {
 
     public int getPort() {
         return select().getPort();
+    }
+
+    public URI getBaseURI() {
+        return select().getBaseURI();
     }
 
     public RequestBuilder get() {
