@@ -277,7 +277,7 @@ public class IntegrationTestExtension implements BeforeEachCallback, BeforeAllCa
         }
 
         int boundPort = application.getBoundPort();
-        clientByAlias.put(providerAlias, TestClient.newClient("localhost", boundPort));
+        clientByAlias.put(providerAlias, DefaultTestClient.newClient("localhost", boundPort));
 
         return application;
     }
