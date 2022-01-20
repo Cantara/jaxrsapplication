@@ -19,6 +19,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -29,9 +31,9 @@ import static java.util.Optional.ofNullable;
 
 public class IntegrationTestExtension implements BeforeEachCallback, BeforeAllCallback, AfterAllCallback {
 
-    final Map<String, JaxRsServletApplication> applicationByAlias = new LinkedHashMap<>();
-    final Map<String, TestClient> clientByAlias = new LinkedHashMap<>();
-    final Set<String> applicationAliases = new LinkedHashSet<>();
+    final Map<String, JaxRsServletApplication> applicationByAlias = new ConcurrentHashMap<>();
+    final Map<String, TestClient> clientByAlias = new ConcurrentHashMap<>();
+    final Set<String> applicationAliases = new CopyOnWriteArraySet<>();
     final AtomicInteger nextAppInitThreadId = new AtomicInteger(1);
     final ExecutorService appInitExecutor = Executors.newCachedThreadPool(runnable -> new Thread(runnable, "app-init-" + nextAppInitThreadId.getAndIncrement()));
 
