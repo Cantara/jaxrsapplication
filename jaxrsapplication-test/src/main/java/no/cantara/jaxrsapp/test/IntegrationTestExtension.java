@@ -19,6 +19,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -26,9 +29,12 @@ import static java.util.Optional.ofNullable;
 
 public class IntegrationTestExtension implements BeforeEachCallback, BeforeAllCallback, AfterAllCallback {
 
-    Map<String, JaxRsServletApplication> applicationByAlias = new LinkedHashMap<>();
-    Map<String, TestClient> clientByAlias = new LinkedHashMap<>();
-    Set<String> applicationAliases = new LinkedHashSet<>();
+    final Map<String, JaxRsServletApplication> applicationByAlias = new LinkedHashMap<>();
+    final Map<String, TestClient> clientByAlias = new LinkedHashMap<>();
+    final Set<String> applicationAliases = new LinkedHashSet<>();
+    final AtomicInteger nextAppInitThreadId = new AtomicInteger(1);
+    final ExecutorService appInitExecutor = Executors.newCachedThreadPool(runnable -> new Thread(runnable, "app-init-" + nextAppInitThreadId.getAndIncrement()));
+
     Node root;
 
     @Override
@@ -81,7 +87,7 @@ public class IntegrationTestExtension implements BeforeEachCallback, BeforeAllCa
         if (root == null) {
             root = buildDependencyGraph(testClass, applicationAliases);
             Set<Node> ancestors = new LinkedHashSet<>();
-            NodeTraversals.depthFirstPostOrder(ancestors, root, node -> {
+            NodeTraversals.depthFirstPostOrderWithConcurrentSiblingExecutions(appInitExecutor, ancestors, root, node -> {
                 if (node == root) {
                     return;
                 }
