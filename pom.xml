@@ -4,7 +4,7 @@
 
     <groupId>no.cantara.jaxrsapp</groupId>
     <artifactId>jaxrsapplication-project</artifactId>
-    <version>0.19.1-SNAPSHOT</version>
+    <version>0.19.1</version>
     <packaging>pom</packaging>
 
     <name>JaxRsApplication-Project</name>
@@ -38,7 +38,7 @@
         <connection>scm:git:git://github.com/Cantara/jaxrsapplication.git</connection>
         <developerConnection>scm:git:git@github.com:Cantara/jaxrsapplication.git</developerConnection>
         <url>https://github.com/Cantara/jaxrsapplication/tree/master</url>
-        <tag>HEAD</tag>
+        <tag>jaxrsapplication-project-0.19.1</tag>
     </scm>
 
     <modules>
