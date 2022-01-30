@@ -180,14 +180,39 @@ public class DefaultTestClient implements TestClient {
 
         public class DefaultFakeApplicationAuthorizationBuilder implements FakeApplicationAuthorizationBuilder {
             private String applicationId;
+            private List<Tag> tags = new LinkedList<>();
+            private List<String> authGroups = new LinkedList<>();
 
             public DefaultFakeApplicationAuthorizationBuilder applicationId(String applicationId) {
                 this.applicationId = applicationId;
                 return this;
             }
 
+            public DefaultFakeApplicationAuthorizationBuilder addTag(String tagName, String tagValue) {
+                tags.add(new Tag(tagName, tagValue));
+                return this;
+            }
+
+            public DefaultFakeApplicationAuthorizationBuilder addTag(String tagValue) {
+                tags.add(new Tag(Tag.DEFAULTNAME, tagValue));
+                return this;
+            }
+
+            public DefaultFakeApplicationAuthorizationBuilder addAccessGroup(String group) {
+                authGroups.add(group);
+                return this;
+            }
+
             public DefaultRequestBuilder endFakeApplication() {
-                header(HttpHeaders.AUTHORIZATION, "Bearer fake-application-id: " + applicationId);
+                if (authGroups.size() > 0) {
+                    String accessGroups = String.join(" ", authGroups);
+                    tags.add(new Tag(WhydahAuthenticationManagerFactory.DEFAULT_AUTH_GROUP_APPLICATION_TAG_NAME, accessGroups));
+                }
+                StringBuilder sb = new StringBuilder("Bearer fake-application-id: ").append(applicationId);
+                if (tags.size() > 0) {
+                    sb.append(", fake-tags: ").append(ApplicationTagMapper.toApplicationTagString(tags));
+                }
+                header(HttpHeaders.AUTHORIZATION, sb.toString());
                 return DefaultRequestBuilder.this;
             }
         }
@@ -198,6 +223,7 @@ public class DefaultTestClient implements TestClient {
             private String usertokenId;
             private String customerRef;
             private final Map<String, String> roles = new LinkedHashMap<>();
+            private final List<String> authGroups = new LinkedList<>();
 
             public DefaultFakeUserAuthorizationBuilder userId(String userId) {
                 this.userId = userId;
@@ -224,12 +250,22 @@ public class DefaultTestClient implements TestClient {
                 return this;
             }
 
+            @Override
+            public FakeUserAuthorizationBuilder addAccessGroup(String group) {
+                this.authGroups.add(group);
+                return this;
+            }
+
             public DefaultRequestBuilder endFakeUser() {
                 if (userId == null) {
                     throw new IllegalArgumentException("userId cannot be null");
                 }
                 if (customerRef == null) {
                     throw new IllegalArgumentException("customerRef cannot be null");
+                }
+                if (authGroups.size() > 0) {
+                    String accessGroups = String.join(" ", authGroups);
+                    roles.put(WhydahAuthenticationManagerFactory.DEFAULT_AUTH_GROUP_USER_ROLE_NAME_FIX, accessGroups);
                 }
                 final StringBuilder sb = new StringBuilder();
                 sb.append("Bearer ");

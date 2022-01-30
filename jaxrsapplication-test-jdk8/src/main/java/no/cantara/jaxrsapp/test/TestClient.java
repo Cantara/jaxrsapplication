@@ -64,6 +64,12 @@ public interface TestClient {
         interface FakeApplicationAuthorizationBuilder {
             FakeApplicationAuthorizationBuilder applicationId(String applicationId);
 
+            FakeApplicationAuthorizationBuilder addTag(String tagName, String tagValue);
+
+            FakeApplicationAuthorizationBuilder addTag(String tagValue);
+
+            FakeApplicationAuthorizationBuilder addAccessGroup(String group);
+
             RequestBuilder endFakeApplication();
         }
 
@@ -78,6 +84,8 @@ public interface TestClient {
             FakeUserAuthorizationBuilder customerRef(String customerRef);
 
             FakeUserAuthorizationBuilder addRole(String name, String value);
+
+            FakeUserAuthorizationBuilder addAccessGroup(String group);
 
             RequestBuilder endFakeUser();
         }
