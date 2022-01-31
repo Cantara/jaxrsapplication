@@ -577,6 +577,7 @@ public class DefaultAccessManager implements AccessManager {
             log.trace("Adding authenticated access-groups to user '{}': {}", userId, String.join(",", assignedGroups));
             effectivePolicyBuilder.aggregate(assignedGroups.stream()
                     .map(groupById::get)
+                    .filter(Objects::nonNull)
                     .map(Group::getPolicy));
         }
         Policy policy = effectivePolicyBuilder.build();
@@ -604,6 +605,7 @@ public class DefaultAccessManager implements AccessManager {
             log.trace("Adding authenticated access-groups to application '{}': {}", applicationId, String.join(",", assignedGroups));
             effectivePolicyBuilder.aggregate(assignedGroups.stream()
                     .map(groupById::get)
+                    .filter(Objects::nonNull)
                     .map(Group::getPolicy));
         }
         Policy policy = effectivePolicyBuilder.build();

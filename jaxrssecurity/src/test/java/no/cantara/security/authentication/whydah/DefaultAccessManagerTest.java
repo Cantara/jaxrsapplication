@@ -9,6 +9,7 @@ import no.cantara.security.authentication.UserAuthentication;
 import no.cantara.security.authorization.DefaultAccessManager;
 import org.junit.jupiter.api.Test;
 
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -62,5 +63,33 @@ public class DefaultAccessManagerTest {
         }, "access-groups");
         assertTrue(accessManager.hasAccess(authenticatedSuperApp, "read"));
         assertTrue(accessManager.hasAccess(authenticatedSuperApp, "write"));
+    }
+
+    @Test
+    public void thatAccessWorksWhenUserAssignedGroupIsNotFound() {
+        DefaultAccessManager accessManager = new DefaultAccessManager("test", ApplicationProperties.builder()
+                .values()
+                .put("actions", "read,write")
+                .put("policy.read-only.allow", "read")
+                .put("role.reader.policies", "read-only")
+                .put("group.readers.roles", "reader")
+                .put("group.admins.roles", "superuser")
+                .end()
+                .build());
+        assertFalse(accessManager.userHasAccess("someuser", Collections.singletonList("badgroup"), "read"));
+    }
+
+    @Test
+    public void thatAccessWorksWhenApplicationAssignedGroupIsNotFound() {
+        DefaultAccessManager accessManager = new DefaultAccessManager("test", ApplicationProperties.builder()
+                .values()
+                .put("actions", "read,write")
+                .put("policy.read-only.allow", "read")
+                .put("role.reader.policies", "read-only")
+                .put("group.readers.roles", "reader")
+                .put("group.admins.roles", "superuser")
+                .end()
+                .build());
+        assertFalse(accessManager.applicationHasAccess("someapplication", Collections.singletonList("badgroup"), "read"));
     }
 }
