@@ -16,7 +16,7 @@
     <description>JaxRsApplication-Parent</description>
 
     <properties>
-        <metrics.version>4.2.7</metrics.version>
+        <metrics.version>4.2.8</metrics.version>
         <jersey.version>3.0.3</jersey.version>
         <jetty.version>11.0.7</jetty.version>
         <swagger.version>2.1.12</swagger.version>
