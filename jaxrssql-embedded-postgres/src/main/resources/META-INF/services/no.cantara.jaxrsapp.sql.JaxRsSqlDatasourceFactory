@@ -1,1 +1,2 @@
 no.cantara.jaxrsapp.sql.embedded.EmbeddedPostgresDatasourceFactory
+no.cantara.jaxrsapp.sql.discard.DiscardingPostgresDatasourceFactory
