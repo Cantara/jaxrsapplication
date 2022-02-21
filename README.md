@@ -1,3 +1,5 @@
+# This project is deprecated. Use Stingray instead: https://github.com/Cantara/stingray
+
 # jaxrsapplication
 Application framework based on Servlets, Jetty, JaxRsWs, Jersey
 
